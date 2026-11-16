@@ -1,0 +1,2536 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1c1c1e">
+<title>Розкладка плитки</title>
+<style>
+:root{
+  --bg:#1c1c1e;--glass:rgba(36,36,38,.62);--fill:rgba(118,118,128,.2);--fill2:rgba(118,118,128,.34);
+  --text:#f5f5f7;--muted:#8e8e93;--acc:#0a84ff;--ok:#30d158;
+  --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px);--sr:env(safe-area-inset-right,0px);
+  --cx:50vw;--fw:100vw;--ro:12px;--bo:12px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg);color:var(--text);
+  font:14px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none}
+#cv{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+button,input{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer;padding:0}
+button:disabled{opacity:.35;pointer-events:none}
+svg{display:block}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%);border-radius:20px;box-shadow:0 14px 44px rgba(0,0,0,.34)}
+.fl{position:fixed;z-index:5}
+.ic{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px}
+.ic svg{width:21px;height:21px;stroke:var(--text);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ic.on{background:var(--acc)}
+.ic:active{background:var(--fill)}
+.btn{background:var(--fill);border-radius:11px;padding:8px 14px;min-height:34px;font-size:14px}
+.btn:active{background:var(--fill2)}
+.btn.acc{background:var(--acc);color:#fff}
+.btn.sm{padding:5px 11px;min-height:30px;font-size:13px}
+.wide{width:100%}
+.seg{display:flex;background:var(--fill);border-radius:11px;padding:2px;gap:2px}
+.seg button{flex:1;border-radius:9px;padding:6px 10px;min-height:30px;font-size:13.5px;white-space:nowrap;color:#d1d1d6}
+.seg button.on{background:#636366;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.glass.seg{padding:4px;border-radius:16px}
+.glass.seg button{min-height:34px}
+
+#btnPanel{left:calc(12px + var(--sl));top:calc(10px + var(--st))}
+#modeSeg{left:var(--cx);transform:translateX(-50%);top:calc(10px + var(--st))}
+#topR{right:calc(var(--ro) + var(--sr));top:calc(10px + var(--st));display:flex;padding:4px;gap:2px;border-radius:16px}
+#tools{left:calc(12px + var(--sl));top:calc(62px + var(--st));padding:4px;display:flex;flex-direction:column;gap:2px;border-radius:16px}
+#wprev,#wnext{top:50%;transform:translateY(-50%);width:38px;height:56px;border-radius:14px;font-size:26px;display:none;align-items:center;justify-content:center}
+#wprev{left:calc(64px + var(--sl))}
+#wnext{right:calc(var(--ro) + var(--sr))}
+#note{left:var(--cx);transform:translateX(-50%);top:calc(62px + var(--st));padding:7px 14px;font-size:12.5px;color:#d1d1d6;display:none;border-radius:14px;pointer-events:none}
+#drawbar{left:var(--cx);transform:translateX(-50%);bottom:calc(var(--bo) + var(--sb));padding:8px;display:none;gap:6px;align-items:center;max-width:calc(var(--fw) - 16px)}
+#drawbar input{width:76px}
+#drawbar .btn{padding:8px 11px;min-width:0}
+@media (max-width:699px){#drawbar{gap:4px;padding:6px}#drawbar .btn{padding:8px 9px}#drawbar input{width:62px}}
+
+#panel{right:calc(10px + var(--sr));top:calc(10px + var(--st));bottom:calc(10px + var(--sb));width:330px;padding:12px;overflow:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:24px}
+#panel::-webkit-scrollbar{display:none}
+#panel.hidden{display:none}
+#panel section{display:none;margin-top:14px}
+#panel section.on{display:block}
+.title{font-size:20px;font-weight:600;letter-spacing:-.01em;margin:2px 0 12px}
+.lbl{font-size:11.5px;color:var(--muted);margin:16px 0 7px}
+.muted{color:var(--muted)}
+.row{display:flex;align-items:center;gap:8px}
+.between{justify-content:space-between}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field span{font-size:11px;color:var(--muted)}
+input[type=text]{background:var(--fill);border:0;border-radius:11px;padding:9px 10px;width:100%;font-size:15px;outline:none;-webkit-user-select:text;user-select:text}
+input[type=text]:focus{box-shadow:0 0 0 2px var(--acc)}
+input[type=number]{background:var(--fill);border:0;border-radius:11px;padding:9px 10px;width:100%;font-size:15px;outline:none;-moz-appearance:textfield;-webkit-user-select:text;user-select:text}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]:focus{box-shadow:0 0 0 2px var(--acc)}
+input::placeholder{color:#58585d}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:center;justify-content:center;gap:6px;min-width:38px;height:34px;padding:0 11px;background:var(--fill);border-radius:11px;font-size:13.5px}
+.chip.on{background:rgba(10,132,255,.26);box-shadow:inset 0 0 0 1.5px var(--acc)}
+.chip svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6}
+.dot{width:13px;height:13px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.dot.empty{background:transparent!important;box-shadow:inset 0 0 0 1.5px #8e8e93}
+.pats{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.pat{aspect-ratio:1;background:var(--fill);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#a1a1a6}
+.pat svg{width:76%;height:76%;fill:currentColor}
+.pat.on{background:rgba(10,132,255,.24);box-shadow:inset 0 0 0 1.5px var(--acc);color:#fff}
+.stat{margin-top:16px}
+.stat div{display:flex;justify-content:space-between;padding:4px 0;border-top:.5px solid rgba(255,255,255,.08)}
+.stat span{color:var(--muted)}
+.card{padding:12px 0;border-top:.5px solid rgba(255,255,255,.1)}
+.card:first-child{border-top:0;padding-top:0}
+.card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-weight:600;font-size:15px}
+.card .x{color:#ff453a;font-size:20px;line-height:1;padding:0 6px}
+.tsum{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.tsum b{color:var(--text);font-weight:600}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.swatches button.on{box-shadow:0 0 0 2px #2a2a2c,0 0 0 4px var(--acc)}
+table{width:100%;border-collapse:collapse}
+td{padding:3px 2px;vertical-align:middle}
+.badge{display:inline-flex;width:26px;height:26px;border-radius:50%;background:#48484a;align-items:center;justify-content:center;font-size:12.5px;cursor:pointer}
+tr.sel .badge{background:var(--acc)}
+tr.lnk .badge{box-shadow:0 0 0 2px var(--ok)}
+.st{color:var(--muted);font-size:11.5px;white-space:nowrap;text-align:right;padding-left:6px}
+.proj{display:flex;align-items:center;gap:6px;padding:9px 0;border-top:.5px solid rgba(255,255,255,.08)}
+.proj .nm{flex:1;text-align:left;min-width:0}
+.proj .nm b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj .nm i{font-style:normal;font-size:11.5px;color:var(--muted)}
+.proj.cur .nm b{color:var(--acc)}
+.proj button.mi{width:30px;height:30px;border-radius:9px;color:var(--muted);font-size:15px}
+.proj button.mi:active{background:var(--fill)}
+
+@media (max-width:699px){
+  #panel{left:calc(8px + var(--sl));right:calc(8px + var(--sr));top:auto;bottom:calc(8px + var(--sb));width:auto;max-height:46vh;max-height:46dvh}
+  #modeSeg{top:calc(58px + var(--st))}
+  #tools{top:calc(108px + var(--st))}
+  #note{top:calc(108px + var(--st))}
+  #wprev{left:calc(64px + var(--sl))}
+}
+@media (pointer:coarse){input[type=number]{font-size:16px}.btn{min-height:40px}.btn.sm{min-height:34px}}
+#addMenu{display:none;left:calc(72px + var(--sl));top:calc(62px + var(--st));flex-direction:column;padding:6px;gap:2px;border-radius:16px}
+#addMenu.show{display:flex}
+#ctx{display:none;flex-direction:column;padding:6px;gap:2px;border-radius:16px;min-width:150px;z-index:9}
+#ctx button{padding:10px 18px;border-radius:12px;text-align:left;font-size:15px}
+#ctx button:active{background:var(--fill)}
+#editBar{left:var(--cx);transform:translateX(-50%);bottom:calc(var(--bo) + var(--sb));padding:8px 8px 8px 18px;display:none;gap:14px;align-items:center;font-size:14px;color:#d1d1d6}
+#addMenu button{padding:10px 18px;border-radius:12px;text-align:left;font-size:15px}
+#addMenu button:active{background:var(--fill)}
+@media (max-width:699px){#addMenu{top:calc(108px + var(--st))}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<button class="fl glass ic" id="btnPanel" aria-label="Панель"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg></button>
+<div class="fl glass seg" id="modeSeg"><button data-mode="plan" class="on">План</button><button data-mode="wall">Стіна</button><button data-mode="unfold">Розгортка</button><button data-mode="3d">3D</button></div>
+<div class="fl glass" id="topR">
+  <button class="ic" id="bUndo" aria-label="Назад"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
+  <button class="ic" id="bRedo" aria-label="Вперед"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg></button>
+</div>
+<div class="fl glass" id="tools">
+  <button class="ic" id="tCursor" aria-label="Курсор"><svg viewBox="0 0 24 24"><path d="M6 3l13 8-6 2-3 7z"/></svg></button>
+  <button class="ic" id="tPencil" aria-label="Олівець"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg></button>
+  <button class="ic" id="tRuler" aria-label="Рулетка"><svg viewBox="0 0 24 24"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></button>
+  <button class="ic" id="tAdd" aria-label="Додати"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="ic" id="tMark" aria-label="Розмітка"><svg viewBox="0 0 24 24"><path d="M4 7v10M20 7v10M4 12h16M7 9l-3 3 3 3M17 9l3 3-3 3"/></svg></button>
+  <button class="ic on" id="tMagnet" aria-label="Магніт"><svg viewBox="0 0 24 24"><path d="M5 4v7a7 7 0 0014 0V4h-4v7a3 3 0 01-6 0V4z"/><path d="M5 8h4M15 8h4"/></svg></button>
+  <button class="ic" id="tLink" aria-label="Прив'язка швів"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></button>
+  <button class="ic" id="tFit" aria-label="Вмістити"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+</div>
+<button class="fl glass" id="wprev" aria-label="Попередня">‹</button>
+<button class="fl glass" id="wnext" aria-label="Наступна">›</button>
+<div class="fl glass" id="addMenu"><button data-add="door">Двері</button><button data-add="win">Вікно</button><button data-add="inst">Інсталяція</button><button data-add="box">Об'єм</button></div>
+<div class="fl glass" id="note"></div>
+<div class="fl glass" id="ctx"><button id="ctxEdit">Змінити</button><button id="ctxDel">Видалити</button></div>
+<div class="fl glass" id="editBar"><span>Режим «Змінити»</span><button class="btn acc" id="editOk">OK</button></div>
+<div class="fl glass" id="drawbar">
+  <button class="btn" id="dbCancel" aria-label="Скасувати">✕</button><button class="btn" id="dbBack" aria-label="Крок назад">⌫</button>
+  <input type="number" id="dbLen" placeholder="мм" inputmode="numeric">
+  <button class="btn" data-dir="-1,0">←</button><button class="btn" data-dir="0,-1">↑</button><button class="btn" data-dir="0,1">↓</button><button class="btn" data-dir="1,0">→</button>
+  <button class="btn acc" id="dbClose">Замкнути</button>
+</div>
+
+<div class="fl glass" id="panel">
+  <div class="seg" id="tabSeg"><button data-tab="layout" class="on">Розкладка</button><button data-tab="tiles">Плитки</button><button data-tab="room">Кімната</button><button data-tab="proj">Проєкти</button></div>
+
+  <section id="tab-layout">
+    <div id="noSel" class="muted" style="padding:18px 0 6px">Оберіть стіну або підлогу</div>
+    <div id="selWrap">
+      <div class="title" id="selTitle"></div>
+      <div id="itemWrap">
+        <div class="field" style="margin-bottom:10px"><span>Назва</span><input type="text" id="itemName" placeholder="Елемент"></div>
+        <div class="g2">
+          <div class="field" data-fw="u"><span>Від кута</span><input type="number" data-if="u" inputmode="decimal"></div>
+          <div class="field" data-fw="w"><span>Ширина</span><input type="number" data-if="w" inputmode="decimal"></div>
+          <div class="field" data-fw="h"><span>Висота</span><input type="number" data-if="h" inputmode="decimal"></div>
+          <div class="field" data-fw="v"><span>Від підлоги</span><input type="number" data-if="v" inputmode="decimal"></div>
+          <div class="field" data-fw="d"><span>Глибина</span><input type="number" data-if="d" inputmode="decimal"></div>
+        </div>
+        <div id="vertList"></div>
+        <div class="row" style="margin-top:12px"><button class="chip" id="revBtn">Відкоси плиткою</button><button class="btn sm" id="itemDel" style="margin-left:auto">Видалити</button></div>
+      </div>
+      <div class="chips" id="faceRow" style="margin-bottom:10px"></div>
+      <div id="tileBlock">
+        <div class="chips" id="tileSel"></div>
+        <div class="lbl">Схема</div>
+        <div class="pats" id="pats"></div>
+        <div class="lbl">Поворот</div>
+        <div class="seg" id="rotSeg"><button data-rot="0">0°</button><button data-rot="45">45°</button><button data-rot="90">90°</button></div>
+        <div class="lbl">Зсув, мм</div>
+        <div class="g2">
+          <div class="field"><span>X</span><input type="number" id="ox" inputmode="decimal" step="1"></div>
+          <div class="field"><span>Y</span><input type="number" id="oy" inputmode="decimal" step="1"></div>
+        </div>
+      </div>
+      <div id="linkRow"><button class="btn wide" id="linkBtn" style="margin-top:14px"></button></div>
+      <div id="wallOnly">
+        <div class="lbl" id="itemsLbl">Об'єкти</div>
+        <div class="chips" id="itemList"></div>
+        <div id="syncBox">
+          <div class="lbl">Поширити на</div>
+          <div class="chips" id="syncList"></div>
+          <div class="row" style="margin-top:8px"><button class="btn sm" id="syncAll">Усі</button><button class="btn sm" id="syncCopy">Копіювати</button></div>
+        </div>
+      </div>
+      <div class="stat" id="stat"></div>
+    </div>
+  </section>
+
+  <section id="tab-tiles">
+    <div id="tileList"></div>
+    <button class="btn wide" id="addTile">+ Плитка</button>
+    <div class="lbl">Разом</div>
+    <div class="stat" id="grand" style="margin-top:0"></div>
+  </section>
+
+  <section id="tab-room">
+    <div class="field"><span>Висота, мм</span><input type="number" id="roomH" min="500" step="10" inputmode="numeric"></div>
+    <button class="btn wide" id="btnDraw" style="margin-top:12px">Накреслити контур</button>
+    <div class="lbl">Стіни</div>
+    <table id="wallTable"></table>
+  </section>
+
+  <section id="tab-proj">
+    <button class="btn wide" id="pNew">+ Новий проєкт</button>
+    <div id="projList" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:12px"><button class="btn sm" id="btnSave">Експорт</button><button class="btn sm" id="btnLoad">Імпорт</button></div>
+    <input type="file" id="file" accept=".json,application/json" hidden>
+  </section>
+</div>
+
+<script>
+'use strict';
+/* ================= утиліти ================= */
+const $ = s => document.querySelector(s);
+const mod = (a, m) => ((a % m) + m) % m;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const r1 = v => Math.round(v * 10) / 10;
+const fmt = v => String(Math.round(v));
+function mix(c, d, t){
+  const a = parseInt(c.slice(1), 16), b = parseInt(d.slice(1), 16);
+  const ch = s => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t);
+  return '#' + [16, 8, 0].map(s => ch(s).toString(16).padStart(2, '0')).join('');
+}
+const C = {bg:'#1c1c1e', grid:'#232325', gridM:'#2b2b2e', grout:'#050506', empty:'#29292c', line:'#8e8e93', acc:'#0a84ff', ok:'#30d158', warn:'#ffb340', text:'#f5f5f7', halo:'rgba(28,28,30,.92)', dim:'rgba(200,200,208,.6)'};
+const PALETTE = ['#f5f5f7', '#c7c7cc', '#e3d3b8', '#8ecbf0', '#a3d9b1', '#f0a07c', '#8a8f9e'];
+const PATS = [['1', 'Пряма'], ['2', 'Цегла ½'], ['3', 'Цегла ⅓'], ['4', 'Цегла ¼'], ['chess', 'Шахматка'], ['hb', 'Ялинка'], ['dhb', 'Подвійна ялинка'], ['chev', 'Шеврон'], ['bsk', 'Кошик'], ['pin', 'Вітряк'], ['hex', 'Соти']];
+const GRID = ['1', '2', '3', '4', 'chess'];
+
+/* ================= стан та проєкти ================= */
+const IDX = 'tileLayout.index', PKEY = id => 'tileLayout.p.' + id;
+let idx = {cur:null, list:[]}, S = null;
+const wallDef = () => ({tile:0, pat:'1', rot:0, ox:0, oy:0, link:false, ops:[]});
+const boxDef = () => ({kind:'box', wall:0, u:0, v:0, w:600, d:300, h:1200, tile:0, pat:'1', rot:0, ox:0, oy:0, link:false, fl:{}});
+const tileDef = i => ({tw:null, th:null, j:2, color:PALETTE[i % PALETTE.length]});
+function defState(){ return {H:2500, pts:[], walls:[], boxes:[], floor:{tile:1, pat:'1', rot:0, fx:0, fy:0}, tiles:[tileDef(0), tileDef(1)], sel:-1, none:false}; }
+function normalize(){
+  if (!S || !Array.isArray(S.pts)) S = defState();
+  const d = defState();
+  S.H = S.H > 0 ? S.H : d.H;
+  if (!Array.isArray(S.tiles) || !S.tiles.length) S.tiles = d.tiles;
+  while (S.tiles.length < 2) S.tiles.push(tileDef(S.tiles.length));
+  S.tiles = S.tiles.map((t, i) => Object.assign(tileDef(i), t));
+  const nt = S.tiles.length;
+  const fixS = o => { if (o.pat === '45'){ o.pat = '1'; o.rot = 45; } if (!PATS.some(p => p[0] === o.pat)) o.pat = '1'; if (![0, 45, 90].includes(o.rot)) o.rot = 0; if (!(o.tile < nt)) o.tile = 0; return o; };
+  S.floor = fixS(Object.assign({}, d.floor, S.floor || {}));
+  S.walls = Array.isArray(S.walls) ? S.walls : [];
+  while (S.walls.length < S.pts.length) S.walls.push(wallDef());
+  S.walls.length = S.pts.length;
+  S.walls = S.walls.map(w => { w = fixS(Object.assign(wallDef(), w)); w.ops = (Array.isArray(w.ops) ? w.ops : []).map(o => Object.assign({t:'door', u:0, v:0, w:900, h:2100, rev:false, d:100, tile:null, pat:'1', rot:0, ox:0, oy:0}, o)); return w; });
+  S.boxes = (Array.isArray(S.boxes) ? S.boxes : []).filter(b => b && b.wall < S.walls.length && (b.kind !== 'prism' || Array.isArray(b.poly))).map(b => { b = fixS(Object.assign(boxDef(), b)); if (!b.fl || typeof b.fl !== 'object') b.fl = {}; for (const k of Object.keys(b.fl)) fixS(b.fl[k]); return b; });
+  if (typeof S.sel !== 'number' || S.sel >= S.pts.length) S.sel = S.pts.length ? 0 : -1;
+  S.none = !!S.none;
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function saveIndex(){ try { localStorage.setItem(IDX, JSON.stringify(idx)); } catch (e) {} }
+function readProject(id){ try { const r = localStorage.getItem(PKEY(id)); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
+function loadIndex(){
+  try { const r = localStorage.getItem(IDX); if (r) idx = JSON.parse(r); } catch (e) {}
+  if (!idx || !Array.isArray(idx.list) || !idx.list.length){
+    let data = null;
+    try { const old = localStorage.getItem('tileLayout.v2'); if (old) data = JSON.parse(old); } catch (e) {}
+    const id = uid(); idx = {cur:id, list:[{id, name:'Проєкт 1', t:Date.now()}]};
+    try { if (data) localStorage.setItem(PKEY(id), JSON.stringify(data)); } catch (e) {}
+    saveIndex();
+  }
+  if (!idx.list.find(p => p.id === idx.cur)) idx.cur = idx.list[0].id;
+}
+loadIndex();
+S = readProject(idx.cur) || defState();
+normalize();
+let saveT = 0;
+function saveNow(){
+  try { localStorage.setItem(PKEY(idx.cur), JSON.stringify(S)); const p = idx.list.find(x => x.id === idx.cur); if (p) p.t = Date.now(); saveIndex(); } catch (e) {}
+}
+function scheduleSave(){ clearTimeout(saveT); saveT = setTimeout(saveNow, 300); }
+
+/* ---- історія (назад / вперед) ---- */
+const HI = {a:[], i:-1};
+let snapT = 0;
+function snapStr(){ const o = Object.assign({}, S); delete o.sel; delete o.none; return JSON.stringify(o); }
+function histReset(){ clearTimeout(snapT); HI.a = [snapStr()]; HI.i = 0; }
+function scheduleSnap(){ clearTimeout(snapT); snapT = setTimeout(snapNow, 450); }
+function snapNow(){
+  clearTimeout(snapT);
+  const s = snapStr();
+  if (s !== HI.a[HI.i]){ HI.a.length = HI.i + 1; HI.a.push(s); if (HI.a.length > 150) HI.a.shift(); HI.i = HI.a.length - 1; }
+  updateUI();
+}
+function restoreSnap(str){
+  const sel = S.sel, none = S.none;
+  S = JSON.parse(str); S.sel = sel; S.none = none; normalize();
+  fullRefresh(false); scheduleSave();
+}
+function undo(){ snapNow(); if (HI.i > 0){ HI.i--; restoreSnap(HI.a[HI.i]); } updateUI(); }
+function redo(){ if (HI.i < HI.a.length - 1){ HI.i++; restoreSnap(HI.a[HI.i]); } updateUI(); }
+histReset();
+
+/* ефективні параметри поверхні */
+function cfg(s){
+  const t = S.tiles[s.tile] || S.tiles[0];
+  return {tw:t.tw > 0 ? t.tw : 0, th:t.th > 0 ? t.th : 0, j:t.j > 0 ? t.j : 0, color:t.color, pat:s.pat, rot:s.rot || 0};
+}
+const valid = c => c.tw > 0 && c.th > 0;
+const gridLike = c => (c.rot || 0) === 0 && GRID.includes(c.pat);
+
+/* ================= геометрія ================= */
+function area(p){ let s = 0; for (let i = 0; i < p.length; i++){ const a = p[i], b = p[(i + 1) % p.length]; s += a.x * b.y - b.x * a.y; } return s / 2; }
+function pointInPoly(pt, poly){
+  let ins = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+    const a = poly[i], b = poly[j];
+    if ((a.y > pt.y) !== (b.y > pt.y) && pt.x < (b.x - a.x) * (pt.y - a.y) / (b.y - a.y) + a.x) ins = !ins;
+  }
+  return ins;
+}
+function clipPoly(poly, x0, y0, x1, y1){
+  const ix = x => (a, b) => ({x, y:a.y + (x - a.x) / (b.x - a.x) * (b.y - a.y)});
+  const iy = y => (a, b) => ({x:a.x + (y - a.y) / (b.y - a.y) * (b.x - a.x), y});
+  const edges = [[p => p.x >= x0, ix(x0)], [p => p.x <= x1, ix(x1)], [p => p.y >= y0, iy(y0)], [p => p.y <= y1, iy(y1)]];
+  let out = poly;
+  for (const [inside, inter] of edges){
+    const inp = out; out = [];
+    for (let i = 0; i < inp.length; i++){
+      const a = inp[i], b = inp[(i + 1) % inp.length], ia = inside(a), ib = inside(b);
+      if (ia && ib) out.push(b);
+      else if (ia && !ib) out.push(inter(a, b));
+      else if (!ia && ib){ out.push(inter(a, b)); out.push(b); }
+    }
+    if (!out.length) break;
+  }
+  return out;
+}
+function clipConvex(subj, clip){
+  const sg = area(clip) >= 0 ? 1 : -1; let out = subj;
+  for (let i = 0; i < clip.length; i++){
+    const a = clip[i], b = clip[(i + 1) % clip.length];
+    const side = p => sg * ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x));
+    const inp = out; out = [];
+    for (let k = 0; k < inp.length; k++){
+      const p = inp[k], q = inp[(k + 1) % inp.length], sp = side(p), sq = side(q);
+      const inter = () => { const t = sp / (sp - sq); return {x:p.x + t * (q.x - p.x), y:p.y + t * (q.y - p.y)}; };
+      if (sp >= 0 && sq >= 0) out.push(q);
+      else if (sp >= 0 && sq < 0) out.push(inter());
+      else if (sp < 0 && sq >= 0){ out.push(inter()); out.push(q); }
+    }
+    if (!out.length) break;
+  }
+  return out;
+}
+function polyBox(p){
+  let x0 = 1e18, y0 = 1e18, x1 = -1e18, y1 = -1e18;
+  for (const q of p){ x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
+  return {x0, y0, x1, y1};
+}
+function bbox(){ return S.pts.length ? polyBox(S.pts) : {x0:0, y0:0, x1:3000, y1:2000}; }
+function setRoom(pts){
+  pts = pts.map(p => ({x:p.x, y:p.y}));
+  if (area(pts) < 0) pts.reverse();
+  const tmpl = (S.walls && S.walls[0]) || wallDef();
+  S.pts = pts;
+  S.walls = pts.map(() => Object.assign({}, tmpl, {ox:0, oy:0, link:false, ops:[]})); S.boxes = [];
+  const b = bbox(); S.floor.fx = b.x0; S.floor.fy = b.y0;
+  S.sel = 0; S.none = false;
+}
+function wallGeom(i){
+  const n = S.pts.length, a = S.pts[i], b = S.pts[(i + 1) % n];
+  const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1e-9;
+  const d = {x:dx / L, y:dy / L};
+  return {a, b, L, d, n:{x:-d.y, y:d.x}};
+}
+function axisOf(i){
+  const g = wallGeom(i);
+  if (Math.abs(g.d.y) < 1e-4) return g.d.x > 0 ? 'x+' : 'x-';
+  if (Math.abs(g.d.x) < 1e-4) return g.d.y > 0 ? 'y+' : 'y-';
+  return null;
+}
+function setWallLength(i, L){
+  const n = S.pts.length; if (!(L > 0)) return;
+  const g = wallGeom(i), g2 = wallGeom((i + 1) % n);
+  const delta = L - g.L, j = (i + 1) % n, k = (i + 2) % n;
+  const perp = Math.abs(g.d.x * g2.d.x + g.d.y * g2.d.y) < 1e-4 && n > 3;
+  S.pts[j].x += g.d.x * delta; S.pts[j].y += g.d.y * delta;
+  if (perp){ S.pts[k].x += g.d.x * delta; S.pts[k].y += g.d.y * delta; }
+}
+function reflex(i){ // вершина i — початок стіни i; true = зовнішній кут (виступає в кімнату)
+  const n = S.pts.length, a = wallGeom((i - 1 + n) % n), b = wallGeom(i);
+  return a.d.x * b.d.y - a.d.y * b.d.x < -1e-6;
+}
+
+/* ================= прив'язка підлога ↔ стіна ================= */
+const linkable = i => !!axisOf(i) && gridLike(cfg(S.walls[i])) && gridLike(cfg(S.floor));
+function linkedOx(i){
+  const ax = axisOf(i), g = wallGeom(i), f = S.floor, fc = cfg(f);
+  switch (ax){
+    case 'x+': return f.fx - g.a.x;
+    case 'x-': return g.a.x - f.fx - fc.tw;
+    case 'y+': return f.fy - g.a.y;
+    case 'y-': return g.a.y - f.fy - fc.th;
+  }
+  return null;
+}
+function effOx(i){ const w = S.walls[i]; if (w.link && linkable(i)){ const v = linkedOx(i); if (v != null) return v; } return w.ox; }
+function floorFromOx(i, val){
+  const ax = axisOf(i), g = wallGeom(i), f = S.floor, fc = cfg(f);
+  switch (ax){
+    case 'x+': f.fx = val + g.a.x; break;
+    case 'x-': f.fx = g.a.x - fc.tw - val; break;
+    case 'y+': f.fy = val + g.a.y; break;
+    case 'y-': f.fy = g.a.y - fc.th - val; break;
+  }
+}
+function setEffOx(i, val){ const w = S.walls[i]; if (w.link && linkable(i)) floorFromOx(i, val); else w.ox = val; }
+
+/* ================= генерація плитки ================= */
+const rectP = (a0, b0, a1, b1) => [[a0, b0], [a1, b0], [a1, b1], [a0, b1]];
+const GEN = {};
+function genGrid(c, a0, b0, a1, b1){
+  const tw = c.tw, th = c.th, Pu = tw + c.j, Pv = th + c.j, out = [];
+  const chess = c.pat === 'chess', n = chess ? 1 : (+c.pat || 1);
+  const rMin = Math.floor((b0 - th) / Pv), rMax = Math.ceil(b1 / Pv);
+  if ((rMax - rMin + 1) * ((a1 - a0) / Pu + 3) > 40000) return null;
+  for (let r = rMin; r <= rMax; r++){
+    const sh = mod(r, n) * Pu / n, kMin = Math.floor((a0 - sh - tw) / Pu), kMax = Math.ceil((a1 - sh) / Pu);
+    for (let k = kMin; k <= kMax; k++){
+      const x = sh + k * Pu, y = r * Pv;
+      out.push({p:rectP(x, y, x + tw, y + th), r, alt:chess && ((r + k) & 1) === 1});
+    }
+  }
+  return out;
+}
+['1', '2', '3', '4', 'chess'].forEach(k => GEN[k] = genGrid);
+function genHB(c, a0, b0, a1, b1, split){
+  const L = Math.max(c.tw, c.th), W = Math.min(c.tw, c.th), j = c.j;
+  const Wb = split * W + (split - 1) * j, Lp = L + j, Wp = Wb + j, h = j / 2, ext = Lp + Wp;
+  let mmin = 1e18, mmax = -1e18, nmin = 1e18, nmax = -1e18;
+  for (const x of [a0 - ext, a1 + ext]) for (const y of [b0 - ext, b1 + ext]){
+    const m = (x + y) / (2 * Lp), n = (y - x) / (2 * Wp);
+    mmin = Math.min(mmin, m); mmax = Math.max(mmax, m); nmin = Math.min(nmin, n); nmax = Math.max(nmax, n);
+  }
+  if ((mmax - mmin + 3) * (nmax - nmin + 3) > 20000) return null;
+  const out = [];
+  const add = (x, y, horiz) => {
+    for (let s = 0; s < split; s++){
+      const off = h + s * (W + j);
+      out.push({p: horiz ? rectP(x + h, y + off, x + Lp - h, y + off + W) : rectP(x + off, y + h, x + off + W, y + Lp - h)});
+    }
+  };
+  for (let m = Math.floor(mmin) - 1; m <= Math.ceil(mmax) + 1; m++) for (let n = Math.floor(nmin) - 1; n <= Math.ceil(nmax) + 1; n++){
+    const x = m * Lp - n * Wp, y = m * Lp + n * Wp;
+    add(x, y, true); add(x + Lp - Wp, y + Wp, false);
+  }
+  return out;
+}
+GEN.hb = (c, a0, b0, a1, b1) => genHB(c, a0, b0, a1, b1, 1);
+GEN.dhb = (c, a0, b0, a1, b1) => genHB(c, a0, b0, a1, b1, 2);
+GEN.chev = (c, a0, b0, a1, b1) => {
+  const L = Math.max(c.tw, c.th), W = Math.min(c.tw, c.th), j = c.j, q = Math.SQRT2;
+  const dx = L / q, h = W * q, g = j * q, P = 2 * (dx + g), Ph = (W + j) * q, out = [];
+  const kMin = Math.floor(a0 / P) - 1, kMax = Math.ceil(a1 / P) + 1, mMin = Math.floor((b0 - dx - h) / Ph) - 1, mMax = Math.ceil(b1 / Ph) + 1;
+  if ((kMax - kMin + 1) * (mMax - mMin + 1) > 20000) return null;
+  for (let m = mMin; m <= mMax; m++) for (let k = kMin; k <= kMax; k++){
+    const X = k * P, y0 = m * Ph, M = 2 * X + 2 * dx + g;
+    out.push({p:[[X, y0], [X + dx, y0 + dx], [X + dx, y0 + dx + h], [X, y0 + h]]});
+    out.push({p:[[M - X, y0], [M - X - dx, y0 + dx], [M - X - dx, y0 + dx + h], [M - X, y0 + h]]});
+  }
+  return out;
+};
+GEN.bsk = (c, a0, b0, a1, b1) => {
+  const L = Math.max(c.tw, c.th), W = Math.min(c.tw, c.th), j = c.j, k = Math.max(2, Math.round(L / W)), Pb = k * (W + j), Lb = Pb - j, out = [];
+  const iMin = Math.floor(a0 / Pb) - 1, iMax = Math.ceil(a1 / Pb) + 1, jMin = Math.floor(b0 / Pb) - 1, jMax = Math.ceil(b1 / Pb) + 1;
+  if ((iMax - iMin + 1) * (jMax - jMin + 1) * k > 40000) return null;
+  for (let jj = jMin; jj <= jMax; jj++) for (let i = iMin; i <= iMax; i++){
+    const bx = i * Pb, by = jj * Pb, horiz = mod(i + jj, 2) === 0;
+    for (let t = 0; t < k; t++){
+      const o = t * (W + j);
+      out.push({p: horiz ? rectP(bx, by + o, bx + Lb, by + o + W) : rectP(bx + o, by, bx + o + W, by + Lb)});
+    }
+  }
+  return out;
+};
+GEN.pin = (c, a0, b0, a1, b1) => {
+  const L = Math.max(c.tw, c.th), W = Math.min(c.tw, c.th), j = c.j, Lp = L + j, Wp = W + j, S_ = Lp + Wp, h = j / 2, out = [];
+  const iMin = Math.floor(a0 / S_) - 1, iMax = Math.ceil(a1 / S_) + 1, jMin = Math.floor(b0 / S_) - 1, jMax = Math.ceil(b1 / S_) + 1;
+  if ((iMax - iMin + 1) * (jMax - jMin + 1) * 5 > 40000) return null;
+  for (let jj = jMin; jj <= jMax; jj++) for (let i = iMin; i <= iMax; i++){
+    const x = i * S_, y = jj * S_, add = (a, b, c2, d, alt) => { if (c2 - a > j + 0.1 && d - b > j + 0.1) out.push({p:rectP(x + a + h, y + b + h, x + c2 - h, y + d - h), alt}); };
+    add(0, 0, Lp, Wp); add(Lp, 0, S_, Lp); add(Wp, Lp, S_, S_); add(0, Wp, Wp, S_); add(Wp, Wp, Lp, Lp, true);
+  }
+  return out;
+};
+GEN.hex = (c, a0, b0, a1, b1) => {
+  const tw = c.tw, th = c.th, j = c.j, A = tw + j, B = th + j * 2 / Math.sqrt(3), Rp = 0.75 * B, out = [];
+  const rMin = Math.floor((b0 - B) / Rp) - 1, rMax = Math.ceil((b1 + B) / Rp) + 1;
+  if ((rMax - rMin + 1) * ((a1 - a0) / A + 3) > 40000) return null;
+  const vx = [[0, -th / 2], [tw / 2, -th / 4], [tw / 2, th / 4], [0, th / 2], [-tw / 2, th / 4], [-tw / 2, -th / 4]];
+  for (let r = rMin; r <= rMax; r++){
+    const off = mod(r, 2) * A / 2, cy = r * Rp, kMin = Math.floor((a0 - off - A) / A), kMax = Math.ceil((a1 - off + A) / A);
+    for (let k = kMin; k <= kMax; k++){ const cx = off + k * A; out.push({p:vx.map(([x, y]) => [cx + x, cy + y])}); }
+  }
+  return out;
+};
+function asRect(pts){
+  if (pts.length !== 4) return null;
+  const k = v => Math.round(v * 1e4);
+  if (new Set(pts.map(p => k(p.x))).size !== 2 || new Set(pts.map(p => k(p.y))).size !== 2) return null;
+  const b = polyBox(pts); return {x0:b.x0, y0:b.y0, x1:b.x1, y1:b.y1};
+}
+function genTiles(c, ox, oy, u0, v0, u1, v1, clip){
+  const out = [];
+  if (!(c.tw > 0 && c.th > 0)) return out;
+  const an = (c.rot || 0) * Math.PI / 180, cs = Math.cos(an), sn = Math.sin(an);
+  let a0 = 1e18, a1 = -1e18, b0 = 1e18, b1 = -1e18;
+  for (const [x, y] of [[u0, v0], [u1, v0], [u1, v1], [u0, v1]]){
+    const dx = x - ox, dy = y - oy, a = dx * cs + dy * sn, b = -dx * sn + dy * cs;
+    a0 = Math.min(a0, a); a1 = Math.max(a1, a); b0 = Math.min(b0, b); b1 = Math.max(b1, b);
+  }
+  const loc = (GEN[c.pat] || GEN['1'])(c, a0, b0, a1, b1);
+  if (!loc) return out;
+  for (const it of loc){
+    const pts = it.p.map(([a, b]) => ({x:ox + a * cs - b * sn, y:oy + a * sn + b * cs}));
+    const rc = asRect(pts);
+    if (rc){
+      const fw = rc.x1 - rc.x0, fh = rc.y1 - rc.y0;
+      let t0 = rc.x0, t1 = rc.x1, s0 = rc.y0, s1 = rc.y1, full = true;
+      if (clip){
+        const q0 = Math.max(t0, u0), q1 = Math.min(t1, u1), p0 = Math.max(s0, v0), p1 = Math.min(s1, v1);
+        if (q1 - q0 < 0.01 || p1 - p0 < 0.01) continue;
+        if (q0 !== t0 || q1 !== t1 || p0 !== s0 || p1 !== s1) full = false;
+        t0 = q0; t1 = q1; s0 = p0; s1 = p1;
+      }
+      out.push({u0:t0, v0:s0, u1:t1, v1:s1, full, r:it.r, alt:it.alt, area:fw * fh, fw, fh, lw:t1 - t0, lh:s1 - s0, lx:(t0 + t1) / 2, ly:(s0 + s1) / 2});
+    } else {
+      const fa = Math.abs(area(pts)); let poly = pts, full = true;
+      if (clip){
+        poly = clipPoly(pts, u0, v0, u1, v1);
+        if (poly.length < 3) continue;
+        const ar = Math.abs(area(poly)); if (ar < 1) continue;
+        full = ar > fa - 1;
+      }
+      const bb = polyBox(poly);
+      out.push({poly, u0:bb.x0, v0:bb.y0, u1:bb.x1, v1:bb.y1, full, r:it.r, alt:it.alt, area:fa});
+    }
+  }
+  return out;
+}
+function subPolyTile(t, poly){
+  const bb = polyBox(poly);
+  if (Math.min(bb.x1, t.u1) - Math.max(bb.x0, t.u0) <= .5 || Math.min(bb.y1, t.v1) - Math.max(bb.y0, t.v0) <= .5) return [t];
+  const cp = clipPoly(poly, t.u0, t.v0, t.u1, t.v1), a = cp.length >= 3 ? Math.abs(area(cp)) : 0, ta = (t.u1 - t.u0) * (t.v1 - t.v0);
+  if (a < 1) return [t];
+  if (a >= ta - 1) return [];
+  return [Object.assign({}, t, {full:false, poly:t.poly || [{x:t.u0, y:t.v0}, {x:t.u1, y:t.v0}, {x:t.u1, y:t.v1}, {x:t.u0, y:t.v1}]})];
+}
+function wallCovers(i){
+  const r = [];
+  for (const o of S.walls[i].ops) r.push({u0:o.u, v0:o.v, u1:o.u + o.w, v1:o.v + o.h});
+  const n = S.pts.length, gi = wallGeom(i);
+  for (const b of S.boxes){
+    if (b.wall < 0){
+      if (b.kind !== 'prism') continue;
+      const P = b.poly, m = P.length;
+      for (let k = 0; k < m; k++){
+        const A = P[k], B = P[(k + 1) % m];
+        if (edgeWall(A, B) !== i) continue;
+        const ua = (A.x - gi.a.x) * gi.d.x + (A.y - gi.a.y) * gi.d.y, ub = (B.x - gi.a.x) * gi.d.x + (B.y - gi.a.y) * gi.d.y;
+        r.push({u0:Math.min(ua, ub), u1:Math.max(ua, ub), v0:b.v, v1:b.v + b.h});
+      }
+      continue;
+    }
+    if (b.wall !== i){
+      const gb = wallGeom(b.wall), pr = b.kind === 'prism', bb = pr ? polyBox(b.poly) : null, bu0 = pr ? bb.x0 : b.u, bu1 = pr ? bb.x1 : b.u + b.w, bv0 = pr ? bb.y0 : b.v, bv1 = pr ? bb.y1 : b.v + b.h;
+      if ((b.wall - 1 + n) % n === i && n > 2 && bu0 <= 1) r.push({u0:Math.max(0, gi.L - b.d), u1:gi.L, v0:bv0, v1:bv1});
+      if ((b.wall + 1) % n === i && n > 2 && bu1 >= gb.L - 1) r.push({u0:0, u1:Math.min(gi.L, b.d), v0:bv0, v1:bv1});
+      continue;
+    }
+    if (b.kind === 'prism'){ const bb = polyBox(b.poly); r.push({u0:bb.x0, v0:bb.y0, u1:bb.x1, v1:bb.y1, poly:b.poly}); }
+    else r.push({u0:b.u, v0:b.v, u1:b.u + b.w, v1:b.v + b.h});
+  }
+  return r;
+}
+function subRect(t, r){
+  if (!(Math.min(r.u1, t.u1) - Math.max(r.u0, t.u0) > .5 && Math.min(r.v1, t.v1) - Math.max(r.v0, t.v0) > .5)) return [t];
+  if (r.u0 <= t.u0 + .5 && r.u1 >= t.u1 - .5 && r.v0 <= t.v0 + .5 && r.v1 >= t.v1 - .5) return [];
+  if (t.poly) return [Object.assign({}, t, {full:false})];
+  const mk = (u0, v0, u1, v1) => Object.assign({}, t, {u0, v0, u1, v1, full:false, lw:u1 - u0, lh:v1 - v0, lx:(u0 + u1) / 2, ly:(v0 + v1) / 2}), out = [];
+  if (r.v0 <= t.v0 + .5 && r.v1 >= t.v1 - .5){ if (r.u0 - t.u0 > .5) out.push(mk(t.u0, t.v0, r.u0, t.v1)); if (t.u1 - r.u1 > .5) out.push(mk(r.u1, t.v0, t.u1, t.v1)); return out; }
+  if (r.u0 <= t.u0 + .5 && r.u1 >= t.u1 - .5){ if (r.v0 - t.v0 > .5) out.push(mk(t.u0, t.v0, t.u1, r.v0)); if (t.v1 - r.v1 > .5) out.push(mk(t.u0, r.v1, t.u1, t.v1)); return out; }
+  return [Object.assign({}, t, {full:false, poly:[{x:t.u0, y:t.v0}, {x:t.u1, y:t.v0}, {x:t.u1, y:t.v1}, {x:t.u0, y:t.v1}]})];
+}
+function wallTiles(i){
+  const w = S.walls[i], g = wallGeom(i);
+  let tl = genTiles(cfg(w), effOx(i), w.oy, 0, 0, g.L, S.H, true);
+  for (const r of wallCovers(i)){ const nx = []; for (const t of tl) for (const q of (r.poly ? subPolyTile(t, r.poly) : subRect(t, r))) nx.push(q); tl = nx; }
+  return tl;
+}
+/* ділянка підлоги, на якій стоїть об'єм: там плитка підлоги не кладеться (один шар) */
+function floorContact(b){
+  if (b.kind === 'prism' && b.wall < 0) return b.v <= .5 ? {poly:b.poly} : null;
+  const g = wallGeom(b.wall); let u0, u1;
+  if (b.kind === 'prism'){
+    const P = b.poly, n = P.length; let lo = 1e18, hi = -1e18;
+    for (let k = 0; k < n; k++){ const A = P[k], B = P[(k + 1) % n]; if (A.y < 1 && B.y < 1){ lo = Math.min(lo, A.x, B.x); hi = Math.max(hi, A.x, B.x); } }
+    if (hi - lo < 1) return null; u0 = lo; u1 = hi;
+  } else { if (b.v > .5) return null; u0 = b.u; u1 = b.u + b.w; }
+  const pts = [[u0, 0], [u1, 0], [u1, b.d], [u0, b.d]].map(([u, d]) => ({x:g.a.x + g.d.x * u + g.n.x * d, y:g.a.y + g.d.y * u + g.n.y * d}));
+  if (axisOf(b.wall)){ const xs = pts.map(p => p.x), ys = pts.map(p => p.y); return {rect:{u0:Math.min(...xs), v0:Math.min(...ys), u1:Math.max(...xs), v1:Math.max(...ys)}}; }
+  return {poly:pts};
+}
+let ftCache = {key:'', tiles:[]};
+function floorTiles(){
+  const f = S.floor, c = cfg(f);
+  const key = [c.tw, c.th, c.j, c.pat, c.rot, f.fx, f.fy, S.pts.map(p => p.x + ',' + p.y).join(';'), S.boxes.map(b => [b.wall, b.u, b.w, b.d, b.v, b.poly ? JSON.stringify(b.poly) : ''].join(',')).join(';')].join('|');
+  if (key === ftCache.key) return ftCache.tiles;
+  const b = bbox(), raw = genTiles(c, f.fx, f.fy, b.x0, b.y0, b.x1, b.y1, false), out = [];
+  for (const t of raw){
+    const cp = t.poly ? clipConvex(S.pts, t.poly) : clipPoly(S.pts, t.u0, t.v0, t.u1, t.v1);
+    const a = cp.length >= 3 ? Math.abs(area(cp)) : 0;
+    if (a < 1) continue;
+    t.full = a > t.area - 1;
+    if (!t.poly){ const bb = polyBox(cp); t.lw = bb.x1 - bb.x0; t.lh = bb.y1 - bb.y0; t.lx = (bb.x0 + bb.x1) / 2; t.ly = (bb.y0 + bb.y1) / 2; }
+    out.push(t);
+  }
+  let res = out;
+  for (const b of S.boxes){
+    const fp = floorContact(b); if (!fp) continue;
+    const nx = [];
+    if (fp.rect){ for (const t of res) for (const q of subRect(t, fp.rect)) nx.push(q); }
+    else { for (const t of res) for (const q of subPolyTile(t, fp.poly)) nx.push(q); }
+    res = nx;
+  }
+  ftCache = {key, tiles:res};
+  return res;
+}
+/* розкрій: шматки підрізаних плиток розкладаються по цілих плитках з пачки (MaxRects; запил у розмірах шматків уже врахований швом).
+   Кожен шматок мусить торкатись заводського краю плитки; одна плитка дає 2, 3, 4… шматки. */
+function packPieces(pieces, c){
+  const TW = c.tw, TH = c.th, K = 0, E = .01, bins = [];
+  const fits = (fr, w, h) => w <= fr.w + E && h <= fr.h + E;
+  const edge = (x, y, a, b) => x <= E || y <= E || x + a >= TW - E || y + b >= TH - E;
+  const cut = (fl, r) => {
+    const out = [];
+    for (const f of fl){
+      if (r.x >= f.x + f.w - E || r.x + r.w <= f.x + E || r.y >= f.y + f.h - E || r.y + r.h <= f.y + E){ out.push(f); continue; }
+      if (r.x > f.x + E) out.push({x:f.x, y:f.y, w:r.x - f.x, h:f.h});
+      if (r.x + r.w < f.x + f.w - E) out.push({x:r.x + r.w, y:f.y, w:f.x + f.w - r.x - r.w, h:f.h});
+      if (r.y > f.y + E) out.push({x:f.x, y:f.y, w:f.w, h:r.y - f.y});
+      if (r.y + r.h < f.y + f.h - E) out.push({x:f.x, y:r.y + r.h, w:f.w, h:f.y + f.h - r.y - r.h});
+    }
+    return out.filter((f, i) => !out.some((g, j) => j !== i && f.x >= g.x - E && f.y >= g.y - E && f.x + f.w <= g.x + g.w + E && f.y + f.h <= g.y + g.h + E && (j < i || f.w * f.h < g.w * g.h - E)));
+  };
+  const place = (bin, a, b) => {
+    let best = null;
+    for (const [pa, pb] of (Math.abs(a - b) < .5 ? [[a, b]] : [[a, b], [b, a]])){
+      if (pa > TW + E || pb > TH + E) continue;
+      for (const fr of bin){
+        if (!fits(fr, pa + K, pb + K)) continue;
+        for (const [x, y] of [[fr.x, fr.y], [fr.x + fr.w - pa - K, fr.y], [fr.x, fr.y + fr.h - pb - K], [fr.x + fr.w - pa - K, fr.y + fr.h - pb - K]]){
+          if (x < fr.x - E || y < fr.y - E || !edge(x, y, pa, pb)) continue;
+          const sc = Math.min(fr.w - pa - K, fr.h - pb - K);
+          if (!best || sc < best.sc) best = {sc, r:{x, y, w:pa + K, h:pb + K}};
+        }
+      }
+    }
+    return best;
+  };
+  const list = pieces.slice().sort((p, q) => q[0] * q[1] - p[0] * p[1]);
+  for (const [a, b] of list){
+    let done = false;
+    for (const bin of bins){ const p = place(bin.fr, a, b); if (p){ bin.fr = cut(bin.fr, p.r); done = true; break; } }
+    if (!done){
+      const bin = {fr:[{x:0, y:0, w:TW + K, h:TH + K}]}; bins.push(bin);
+      const p = place(bin.fr, a, b);
+      bin.fr = p ? cut(bin.fr, p.r) : [];
+    }
+  }
+  return bins.length;
+}
+function packTiles(tiles, c){
+  let full = 0, cutN = 0, loose = 0; const pieces = [];
+  for (const t of tiles){
+    if (t.full){ full++; continue; }
+    cutN++;
+    if (t.poly || !(t.lw > 0)){ loose++; continue; }
+    pieces.push([t.lw, t.lh]);
+  }
+  const open = packPieces(pieces, c) + loose;
+  return {full, cut:cutN, open, n:full + open, pieces, loose};
+}
+let STAT = null;
+const getStat = () => STAT || (STAT = statAll());
+const counts = tiles => { let f = 0, c = 0; for (const t of tiles) t.full ? f++ : c++; return {full:f, cut:c}; };
+function corners(t){ return t.poly ? t.poly.map(p => [p.x, p.y]) : [[t.u0, t.v0], [t.u1, t.v0], [t.u1, t.v1], [t.u0, t.v1]]; }
+function tileFill(c, t){ return t.alt ? mix(c.color, '#000000', 0.3) : c.color; }
+let HATCH = null, HATCHES = [], hatchDpr = 0;
+function getHatch(){
+  if (HATCH && hatchDpr === dpr) return HATCH;
+  try {
+    const k = Math.max(1, Math.round(dpr)); HATCHES = [];
+    const mk = fn => { const cvs = document.createElement('canvas'); cvs.width = cvs.height = 8 * k; const h = cvs.getContext('2d'); h.strokeStyle = 'rgba(150,150,158,.62)'; h.lineWidth = k; h.beginPath(); fn(h, 8 * k, k); h.stroke(); const p = ctx.createPattern(cvs, 'repeat'); if (p.setTransform) p.setTransform(new DOMMatrix().scale(1 / k)); return p; };
+    const slash = (h, n, c) => { for (let m = -1; m <= 1; m++){ h.moveTo(-n, c + m * n + n); h.lineTo(2 * n, c + m * n - 2 * n); } };
+    const back = (h, n, c) => { for (let m = -1; m <= 1; m++){ h.moveTo(-n, c + m * n - n); h.lineTo(2 * n, c + m * n + 2 * n); } };
+    HATCHES.push(mk((h, n, k) => { slash(h, n, n / 2 - 1.5 * k); slash(h, n, n / 2 + 1.5 * k); }));          // 0 / подвійна
+    HATCHES.push(mk((h, n, k) => { back(h, n, n / 2 - 1.5 * k); back(h, n, n / 2 + 1.5 * k); }));           // 1 \ подвійна
+    HATCHES.push(mk((h, n) => { for (const [x, y] of [[0, n], [n, 0]]){ h.moveTo(x ? n * .5 : 0, y ? n * .5 : n); } h.moveTo(0, n); h.lineTo(n / 2, n / 2); h.moveTo(n, n); h.lineTo(n * 1.5, n / 2); }));  // 2 / пунктир
+    HATCHES.push(mk((h, n) => { h.moveTo(0, 0); h.lineTo(n / 2, n / 2); h.moveTo(n, 0); h.lineTo(n * 1.5, n / 2); h.moveTo(-n / 2, n / 2); h.lineTo(0, n); }));   // 3 \ пунктир
+    HATCHES.push(mk((h, n, k) => { h.moveTo(0, n / 2 - 1.5 * k); h.lineTo(n, n / 2 - 1.5 * k); h.moveTo(0, n / 2 + 1.5 * k); h.lineTo(n, n / 2 + 1.5 * k); }));  // 4 гор. подвійна
+    HATCHES.push(mk((h, n, k) => { h.moveTo(n / 2 - 1.5 * k, 0); h.lineTo(n / 2 - 1.5 * k, n); h.moveTo(n / 2 + 1.5 * k, 0); h.lineTo(n / 2 + 1.5 * k, n); }));  // 5 верт. подвійна
+    HATCHES.push(mk((h, n, k) => { h.moveTo(n / 2 + 1.1 * k, n / 2); h.arc(n / 2, n / 2, 1.1 * k, 0, 7); }));   // 6 крапки
+    HATCHES.push(mk((h, n) => { h.moveTo(0, n / 2); h.lineTo(n / 2, n / 2); }));                               // 7 гор. пунктир
+    HATCHES.push(mk((h, n) => { slash(h, n, n / 2); back(h, n, n / 2); }));                                    // 8 хрест діагональний
+    HATCHES.push(mk((h, n) => { h.moveTo(0, n / 2); h.lineTo(n, n / 2); h.moveTo(n / 2, 0); h.lineTo(n / 2, n); }));  // 9 хрест прямий
+    HATCH = HATCHES[0]; hatchDpr = dpr;
+  } catch (e) { HATCH = null; HATCHES = []; }
+  return HATCH;
+}
+/* штриховка ніколи не збігається з напрямком швів: прямі шви → діагональ, косі шви → гор./верт./крапки */
+function hatchFor(c, v){
+  if (!HATCHES.length) return null;
+  const rot = ((c && c.rot) || 0), pat = c && c.pat;
+  const list = (pat === 'hex' || pat === 'chev') ? [6, 0, 1, 2, 8] : (rot % 90 === 0 ? [0, 1, 2, 3, 8] : [4, 5, 6, 7, 9]);
+  return HATCHES[list[(v || 0) % list.length]];
+}
+function hatchOver(c, v){ const p = hatchFor(c, v); if (p){ ctx.save(); ctx.globalAlpha = .85; ctx.fillStyle = p; ctx.fillRect(0, 0, W, Hh); ctx.restore(); } }
+function paintT(c, t, map, poly, hi){
+  ctx.fillStyle = tileFill(c, t); fillT(t, map, poly);
+  const p = !t.full && hatchFor(c, hi); if (p){ ctx.fillStyle = p; fillT(t, map, poly); }
+}
+
+/* ---- підрахунок ---- */
+function narrowStat(tiles){
+  /* вузька частина — підрізана плитка завдяки якій утворюється «лінія» шириною ≤ 30 см;
+     рахуємо довжину цієї лінії: ряд (висота ≤ 30 см) дає свою ширину, стовпчик (ширина ≤ 30 см) — свою висоту */
+  let len = 0, ar = 0;
+  for (const t of tiles){
+    if (t.full || t.poly || !(t.lw > 0)) continue;
+    const row = t.lh <= 300.5, col = t.lw <= 300.5;
+    if (!row && !col) continue;
+    if (row) len += t.lw / 1000;
+    if (col) len += t.lh / 1000;
+    ar += t.lw * t.lh / 1e6;
+  }
+  return {len, area:ar};
+}
+function opCfg(i, o){ const w = S.walls[i]; return cfg({tile:o.tile != null ? o.tile : w.tile, pat:o.pat || '1', rot:o.rot || 0}); }
+function opFaces(i, o){
+  const g = wallGeom(i), dd = o.d > 0 ? o.d : 100, Wd = (u, v, dep) => [g.a.x + g.d.x * u - g.n.x * dep, v, g.a.y + g.d.y * u - g.n.y * dep];
+  const out = [
+    {n:'ліва', W:dd, H:o.h, m:(x, y) => Wd(o.u, o.v + y, x), nr:[g.d.x, 0, g.d.y]},
+    {n:'права', W:dd, H:o.h, m:(x, y) => Wd(o.u + o.w, o.v + y, x), nr:[-g.d.x, 0, -g.d.y]},
+    {n:'верх', W:o.w, H:dd, m:(x, y) => Wd(o.u + x, o.v + o.h, y), nr:[0, -1, 0]}];
+  if (o.t !== 'door') out.push({n:'низ', W:o.w, H:dd, m:(x, y) => Wd(o.u + x, o.v, y), nr:[0, 1, 0]});
+  return out;
+}
+function faceTiles(f, c, ox, oy){
+  if (!valid(c)) return [];
+  if (!f.poly) return genTiles(c, ox, oy, 0, 0, f.W, f.H, true);
+  const raw = genTiles(c, ox, oy, 0, 0, f.W, f.H, false), out = [];
+  for (const t of raw){
+    const cp = t.poly ? clipConvex(f.poly, t.poly) : clipPoly(f.poly, t.u0, t.v0, t.u1, t.v1), a = cp.length >= 3 ? Math.abs(area(cp)) : 0;
+    if (a < 1) continue;
+    t.full = a > t.area - 1;
+    if (!t.poly){ const bb = polyBox(cp); t.lw = bb.x1 - bb.x0; t.lh = bb.y1 - bb.y0; t.lx = (bb.x0 + bb.x1) / 2; t.ly = (bb.y0 + bb.y1) / 2; }
+    out.push(t);
+  }
+  return out;
+}
+function distSeg(p, a, b){
+  const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1e-9, t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / l2, 0, 1);
+  return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t);
+}
+function edgeOnWall(A, B){
+  const n = S.pts.length;
+  for (let i = 0; i < n; i++){ const a = S.pts[i], b = S.pts[(i + 1) % n]; if (distSeg(A, a, b) < 2 && distSeg(B, a, b) < 2) return true; }
+  return false;
+}
+/* окремі площини об'єму: кожна має свою плитку/схему/поворот/зсув (як стіни) */
+function faceSurf(b, fn, create){
+  const e = fn && b.fl && b.fl[fn]; if (e) return e;
+  if (!create || !fn) return b;
+  b.fl = b.fl || {}; return (b.fl[fn] = {tile:b.tile, pat:b.pat, rot:b.rot, ox:b.ox, oy:b.oy});
+}
+function fcfg(b, f){ const e = faceSurf(b, f.n, false); return {c:cfg(e), ox:e.ox || 0, oy:e.oy || 0}; }
+function defFace(b){
+  const fs = itemFaces(b).map(f => f.n), want = V.mode === 'plan' ? ['верх', 'фасад'] : ['фасад', 'верх'];
+  return want.find(n => fs.includes(n)) || fs[0];
+}
+function edgeWall(A, B){
+  const n = S.pts.length;
+  for (let i = 0; i < n; i++){ const a = S.pts[i], b = S.pts[(i + 1) % n]; if (distSeg(A, a, b) < 2 && distSeg(B, a, b) < 2) return i; }
+  return -1;
+}
+function itemFaces(b){
+  const out = [];
+  if (b.kind !== 'prism'){
+    const g = wallGeom(b.wall), Wd = (u, v, dep) => [g.a.x + g.d.x * u + g.n.x * dep, v, g.a.y + g.d.y * u + g.n.y * dep];
+    const o = [{n:'фасад', W:b.w, H:b.h, m:(x, y) => Wd(b.u + x, b.v + y, b.d), nr:[g.n.x, 0, g.n.y]}];
+    if (b.u > 1) o.push({n:'ліва', W:b.d, H:b.h, m:(x, y) => Wd(b.u, b.v + y, x), nr:[-g.d.x, 0, -g.d.y]});
+    if (b.u + b.w < g.L - 1) o.push({n:'права', W:b.d, H:b.h, m:(x, y) => Wd(b.u + b.w, b.v + y, x), nr:[g.d.x, 0, g.d.y]});
+    if (b.v + b.h < S.H - 1) o.push({n:'верх', W:b.w, H:b.d, m:(x, y) => Wd(b.u + x, b.v + b.h, y), nr:[0, 1, 0]});
+    return o;
+  }
+  const P = b.poly, n = P.length, bb = polyBox(P), loc = P.map(p => ({x:p.x - bb.x0, y:p.y - bb.y0}));
+  if (b.wall < 0){
+    for (let k = 0; k < n; k++){
+      const A = P[k], B = P[(k + 1) % n], len = Math.hypot(B.x - A.x, B.y - A.y); if (len < 1 || edgeOnWall(A, B)) continue;
+      const dx = (B.x - A.x) / len, dy = (B.y - A.y) / len;
+      out.push({n:'бік ' + (k + 1), W:len, H:b.h, edge:k, m:(x, y) => [A.x + dx * x, b.v + y, A.y + dy * x], nr:[dy, 0, -dx]});
+    }
+    if (b.v + b.h < S.H - 1) out.push({n:'верх', W:bb.x1 - bb.x0, H:bb.y1 - bb.y0, poly:loc, m:(x, y) => [bb.x0 + x, b.v + b.h, bb.y0 + y], nr:[0, 1, 0]});
+    return out;
+  }
+  const g = wallGeom(b.wall), L = g.L, H = S.H, Wd = (u, v, dep) => [g.a.x + g.d.x * u + g.n.x * dep, v, g.a.y + g.d.y * u + g.n.y * dep];
+  for (let k = 0; k < n; k++){
+    const A = P[k], B = P[(k + 1) % n], len = Math.hypot(B.x - A.x, B.y - A.y); if (len < 1) continue;
+    if ((A.y < 1 && B.y < 1) || (A.y > H - 1 && B.y > H - 1) || (A.x < 1 && B.x < 1) || (A.x > L - 1 && B.x > L - 1)) continue;
+    const eu = (B.x - A.x) / len, ev = (B.y - A.y) / len;
+    out.push({n:'бік ' + (k + 1), W:len, H:b.d, edge:k, m:(x, y) => Wd(A.x + eu * x, A.y + ev * x, y), nr:[g.d.x * ev, -eu, g.d.y * ev]});
+  }
+  out.push({n:'фасад', W:bb.x1 - bb.x0, H:bb.y1 - bb.y0, poly:loc, m:(x, y) => Wd(bb.x0 + x, bb.y0 + y, b.d), nr:[g.n.x, 0, g.n.y]});
+  return out;
+}
+function itemMiter(b){
+  if (b.kind !== 'prism'){
+    const fs = itemFaces(b), L = fs.some(f => f.n === 'ліва'), R = fs.some(f => f.n === 'права'), T = fs.some(f => f.n === 'верх');
+    return ((L ? b.h : 0) + (R ? b.h : 0) + (T ? b.w : 0) + (T && L ? b.d : 0) + (T && R ? b.d : 0)) / 1000;
+  }
+  const P = b.poly, n = P.length, E = b.wall < 0 ? b.h : b.d, ret = new Set(itemFaces(b).filter(f => f.edge != null).map(f => f.edge));
+  let m = 0;
+  for (const k of ret){ const A = P[k], B = P[(k + 1) % n]; m += Math.hypot(B.x - A.x, B.y - A.y); }
+  for (let k = 0; k < n; k++){
+    const pk = (k - 1 + n) % n; if (!ret.has(k) || !ret.has(pk)) continue;
+    const a = P[pk], b2 = P[k], c2 = P[(k + 1) % n];
+    if ((b2.x - a.x) * (c2.y - b2.y) - (b2.y - a.y) * (c2.x - b2.x) > 1e-6) m += E;
+  }
+  return m / 1000;
+}
+function revStats(i, o){
+  const c = opCfg(i, o);
+  if (!o.rev || !valid(c) || !(o.d > 0)) return null;
+  let all = [], ar = 0;
+  for (const f of opFaces(i, o)){ all = all.concat(faceTiles(f, c, o.ox || 0, o.oy || 0)); ar += f.W * f.H; }
+  const pk = packTiles(all, c), nr = narrowStat(all), len = o.t === 'door' ? 2 * o.h + o.w : 2 * o.h + 2 * o.w;
+  return {full:pk.full, cut:pk.cut, n:pk.n, tiles:pk.n, pieces:pk.pieces, loose:pk.loose, area:Math.max(0, ar / 1e6 - nr.area), narrow:nr.len, miter:len / 1000};
+}
+function boxStat(b){
+  const out = {full:0, cut:0, open:0, n:0, area:0, narrow:0, miter:itemMiter(b), parts:[]}, g = {};
+  for (const f of itemFaces(b)){
+    const fc = fcfg(b, f); if (!valid(fc.c)) continue;
+    const k = faceSurf(b, f.n, false).tile, e = g[k] || (g[k] = {c:fc.c, tiles:[], ar:0});
+    e.tiles = e.tiles.concat(faceTiles(f, fc.c, fc.ox, fc.oy)); e.ar += f.poly ? Math.abs(area(f.poly)) : f.W * f.H;
+  }
+  for (const k of Object.keys(g)){
+    const e = g[k], pk = packTiles(e.tiles, e.c), nr = narrowStat(e.tiles), ar = Math.max(0, e.ar / 1e6 - nr.area);
+    out.parts.push({tile:+k, full:pk.full, cut:pk.cut, pieces:pk.pieces, loose:pk.loose, area:ar, narrow:nr.len});
+    out.full += pk.full; out.cut += pk.cut; out.open += pk.open; out.n += pk.n; out.area += ar; out.narrow += nr.len;
+  }
+  return out;
+}
+function statAll(){
+  const per = S.tiles.map(() => ({full:0, cut:0, bins:0, area:0, miter:0, narrow:0})), pool = S.tiles.map(() => ({pieces:[], loose:0})), surf = {}, surfB = {};
+  const feed = (k, pk) => { for (const p of pk.pieces) pool[k].pieces.push(p); pool[k].loose += pk.loose; };
+  if (S.pts.length >= 3){
+    const add = sel => {
+      const sf = sel < 0 ? S.floor : S.walls[sel], c = cfg(sf);
+      let a = sel < 0 ? Math.abs(area(S.pts)) / 1e6 : wallGeom(sel).L * S.H / 1e6;
+      if (sel < 0){ for (const b of S.boxes){ const fp = floorContact(b); if (!fp) continue; a -= (fp.rect ? (fp.rect.u1 - fp.rect.u0) * (fp.rect.v1 - fp.rect.v0) : Math.abs(area(fp.poly))) / 1e6; } }
+      else for (const r of wallCovers(sel)) a -= (r.poly ? Math.abs(area(r.poly)) : (r.u1 - r.u0) * (r.v1 - r.v0)) / 1e6;
+      if (!valid(c)) return;
+      const tl = sel < 0 ? floorTiles() : wallTiles(sel), k = packTiles(tl, c), nr = narrowStat(tl), P = per[sf.tile];
+      P.full += k.full; P.cut += k.cut; feed(sf.tile, k); P.area += Math.max(0, a - nr.area); P.narrow += nr.len;
+      const kk = {full:k.full, open:k.open, n:k.n};
+      if (sel >= 0) for (const o of S.walls[sel].ops){
+        const rv = revStats(sel, o); if (!rv) continue;
+        const ot = o.tile != null ? o.tile : S.walls[sel].tile;
+        per[ot].full += rv.full; per[ot].cut += rv.cut; feed(ot, rv); per[ot].area += rv.area; per[ot].narrow += rv.narrow; per[ot].miter += rv.miter; kk.n += rv.n; kk.full += rv.full;
+      }
+      surf[sel] = kk;
+    };
+    add(-1); S.walls.forEach((_, i) => add(i));
+    const n = S.pts.length;
+    for (let v = 0; v < n; v++){
+      if (!reflex(v)) continue;
+      const wa = S.walls[(v - 1 + n) % n], wb = S.walls[v];
+      if (!valid(cfg(wa)) || !valid(cfg(wb))) continue;
+      per[wa.tile].miter += S.H / 1000; per[wb.tile].miter += S.H / 1000;
+    }
+    S.boxes.forEach((b, bi) => {
+      const bs = boxStat(b);
+      for (const pt of bs.parts){ const P = per[pt.tile]; P.full += pt.full; P.cut += pt.cut; feed(pt.tile, pt); P.area += pt.area; P.narrow += pt.narrow; }
+      per[b.tile].miter += bs.miter; surfB[bi] = bs;
+    });
+    pool.forEach((pl, k) => { const c = cfg({tile:k, pat:'1', rot:0}); per[k].bins = valid(c) ? packPieces(pl.pieces, c) + pl.loose : 0; });
+  }
+  return {per, surf, surfB};
+}
+function wallMiter(i){
+  const n = S.pts.length; let m = 0;
+  if (reflex(i)) m += S.H / 1000;
+  if (reflex((i + 1) % n)) m += S.H / 1000;
+  for (const o of S.walls[i].ops){ const rv = revStats(i, o); if (rv) m += rv.miter; }
+  return m;
+}
+
+/* ================= вигляд ================= */
+const U = {magnet:true, mk:false};
+const R = {on:false, a:null, b:null};
+const V = {mode:'plan', plan:{s:.1, tx:0, ty:0, fit:true}, wall:{s:.2, tx:0, ty:0, fit:true}, unf:{s:.1, tx:0, ty:0, fit:true}, cam:{yaw:.55, pitch:.6, dist:6000, px:0, py:0, init:false}, hits:[], hitFloor:null, cs:null, proj:null};
+const D = {mode:'room', active:false, pts:[], buf:'', mouse:null, free:false, closing:false};
+const syncSet = new Set();
+let ITEM = null, EDIT = false, LP = 0;
+const wSel = i => !S.none && !ITEM && S.sel === i;
+const fSel = () => !S.none && !ITEM && S.sel < 0;
+let FA = {x:0, y:70, w:800, h:600}, panelOpen = true, tab = 'layout';
+
+const cv = $('#cv'), ctx = cv.getContext('2d');
+let W = 0, Hh = 0, dpr = 1, needDraw = false;
+function resize(){
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  W = window.innerWidth; Hh = window.innerHeight;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(Hh * dpr);
+  layout(); redraw();
+}
+function layout(){
+  const phone = window.innerWidth < 700, p = $('#panel');
+  const top = phone ? 106 : 66;
+  let x = 64, w = W - 64, h = Hh - top, ro = 12, bo = 12;
+  if (panelOpen){
+    if (phone){ const ph = p.offsetHeight; h -= ph + 16; bo = ph + 18; } else { w -= 352; ro = 352; }
+  }
+  FA = {x, y:top, w:Math.max(150, w), h:Math.max(150, h)};
+  const rs = document.documentElement.style;
+  rs.setProperty('--cx', (FA.x + FA.w / 2) + 'px'); rs.setProperty('--fw', FA.w + 'px');
+  rs.setProperty('--ro', ro + 'px'); rs.setProperty('--bo', bo + 'px');
+}
+window.addEventListener('resize', resize);
+if (window.ResizeObserver) new ResizeObserver(() => layout()).observe($('#panel'));
+function redraw(){ if (needDraw) return; needDraw = true; requestAnimationFrame(() => { needDraw = false; draw(); }); }
+
+const P2S = (x, y) => [x * V.plan.s + V.plan.tx, y * V.plan.s + V.plan.ty];
+const S2P = (px, py) => [(px - V.plan.tx) / V.plan.s, (py - V.plan.ty) / V.plan.s];
+function fitPlan(box){
+  const b = box || bbox(), w = (b.x1 - b.x0) || 1, h = (b.y1 - b.y0) || 1, m = 64;
+  const s = Math.max(.005, Math.min((FA.w - 2 * m) / w, (FA.h - 2 * m) / h));
+  V.plan.s = s; V.plan.tx = FA.x + (FA.w - w * s) / 2 - b.x0 * s; V.plan.ty = FA.y + (FA.h - h * s) / 2 - b.y0 * s; V.plan.fit = false;
+}
+function fitWall(){
+  if (S.sel < 0 || !S.pts.length) return;
+  const L = wallGeom(S.sel).L, H = S.H, strip = 600;
+  const s = Math.max(.005, Math.min((FA.w - 150) / L, (FA.h - 120) / (H + strip)));
+  V.wall.s = s; V.wall.tx = FA.x + (FA.w - L * s) / 2 + 36; V.wall.ty = FA.y + 56 + (FA.h - 120 - (H + strip) * s) / 2 + H * s; V.wall.fit = false;
+}
+function unfoldPanels(){
+  const out = [];
+  S.walls.forEach((w, i) => { const c0 = cfg(w); w.ops.forEach((o, j) => {
+    if (!o.rev) return;
+    const ref = {k:'op', w:i, i:j}, fs = opFaces(i, o), dd = o.d > 0 ? o.d : 100, c = opCfg(i, o), by = n => fs.find(f => f.n === n);
+    const subs = [{f:by('верх'), x:dd, y:0}, {f:by('ліва'), x:0, y:dd}, {f:by('права'), x:dd + o.w, y:dd}], B = by('низ');
+    if (B) subs.push({f:B, x:dd, y:dd + o.h});
+    subs.forEach(sb => { sb.W = sb.f.W; sb.H = sb.f.H; sb.c = c; sb.ox = o.ox || 0; sb.oy = o.oy || 0; });
+    out.push({label:`Відкіс ${itemName(ref).toLowerCase()}`, ref, subs, W:2 * dd + o.w, H:dd + o.h + (B ? dd : 0), hole:{x:dd, y:dd, W:o.w, H:o.h}, hi:4});
+  }); });
+  S.boxes.forEach((b, k) => {
+    const ref = {k:'bx', i:k}, c = cfg(b), fs = itemFaces(b), subs = [];
+    let cap, sides;
+    if (b.kind === 'prism'){ cap = fs.find(f => f.poly); sides = fs.filter(f => f.edge != null).sort((a, d) => a.edge - d.edge); }
+    else { const by = n => fs.find(f => f.n === n); cap = by('верх'); sides = [by('ліва'), by('фасад'), by('права')].filter(Boolean); }
+    const capH = cap ? cap.H : 0, capX = (b.kind !== 'prism' && sides[0] && sides[0].n === 'ліва') ? sides[0].W : 0;
+    let x = 0, sh = 0;
+    for (const f of sides){ subs.push({f, x, y:capH}); x += f.W; sh = Math.max(sh, f.H); }
+    if (cap) subs.push({f:cap, x:capX, y:0});
+    subs.forEach(sb => { const fc = fcfg(b, sb.f); sb.W = sb.f.W; sb.H = sb.f.H; sb.c = fc.c; sb.ox = fc.ox; sb.oy = fc.oy; });
+    out.push({label:itemName(ref), ref, subs, W:Math.max(x, capX + (cap ? cap.W : 0)), H:capH + sh, hi:1 + (k % 3)});
+  });
+  return out;
+}
+function unfoldLayout(){
+  const G = 300, FG = 700, n = S.walls.length, b = bbox(), bw = b.x1 - b.x0, bh = b.y1 - b.y0, xs = [];
+  let x = 0; for (let i = 0; i < n; i++){ xs.push(x); x += wallGeom(i).L + G; }
+  const stripW = x - G, s = V.unf.s > 0 ? V.unf.s : .08, slot0 = 135 / s, pans = unfoldPanels(), maxW = Math.max(stripW, bw + G + 3000);
+  let px = bw + G, y0 = 0, rowH = bh, total = Math.max(stripW, bw);
+  for (const p of pans){
+    const slot = Math.max(p.W, slot0);
+    if (px + slot > maxW && px > 0){ y0 += rowH + 2 * G + 90 / s; rowH = 0; px = 0; }
+    p.x = px; p.y = y0; p.slot = slot; px += slot + G; rowH = Math.max(rowH, p.H); total = Math.max(total, px - G);
+  }
+  return {xs, stripW, total, fx:0, fgap:FG, bw, bh, b, pans, totalH:y0 + rowH};
+}
+function fitUnfold(){
+  if (S.pts.length < 3) return;
+  const L = unfoldLayout(), w = L.total, h = S.H + L.fgap + L.totalH;
+  const s = Math.max(.003, Math.min((FA.w - 110) / w, (FA.h - 140) / h));
+  V.unf.s = s; V.unf.tx = FA.x + (FA.w - w * s) / 2; V.unf.ty = FA.y + 64 + (FA.h - 140 - h * s) / 2 + S.H * s; V.unf.fit = false;
+}
+function fit3D(){ const b = bbox(); V.cam.dist = Math.max(b.x1 - b.x0, b.y1 - b.y0, S.H) * 2.1; V.cam.px = V.cam.py = 0; V.cam.init = true; }
+
+/* ================= вибір / зміни ================= */
+function getItem(){
+  if (!ITEM) return null;
+  if (ITEM.k === 'op'){ const w = S.walls[ITEM.w]; return (w && w.ops[ITEM.i]) || null; }
+  return S.boxes[ITEM.i] || null;
+}
+const curSurf = () => { const it = getItem(); if (it && ITEM.k === 'bx') return faceSurf(it, ITEM.f, false); if (it){ const w = S.walls[ITEM.w]; return {tile:it.tile != null ? it.tile : w.tile, pat:it.pat || '1', rot:it.rot || 0}; } return S.sel < 0 ? S.floor : S.walls[S.sel]; };
+const targets = () => (ITEM && getItem() && ITEM.k === 'bx') ? (ITEM.f ? [faceSurf(getItem(), ITEM.f, true)] : [getItem(), ...Object.values(getItem().fl || {})]) : (ITEM && getItem() && getItem().rev) ? [getItem()] : S.sel < 0 ? [S.floor] : [S.walls[S.sel], ...[...syncSet].filter(i => i < S.walls.length && i !== S.sel).map(i => S.walls[i])];
+function getOffs(){
+  { const it = getItem(); if (it && ITEM.k === 'bx'){ const so = faceSurf(it, ITEM.f, false); return {x:so.ox, y:so.oy, cfg:cfg(so)}; } if (it && it.rev) return {x:it.ox || 0, y:it.oy || 0, cfg:cfg(curSurf())}; }
+  if (S.sel < 0){ const b = bbox(); return {x:S.floor.fx - b.x0, y:S.floor.fy - b.y0, cfg:cfg(S.floor)}; }
+  return {x:effOx(S.sel), y:S.walls[S.sel].oy, cfg:cfg(S.walls[S.sel])};
+}
+function setOffs(x, y){
+  { const it = getItem(); if (it && ITEM.k === 'bx'){ targets().forEach(t => { t.ox = x; t.oy = y; }); return; } if (it && it.rev){ it.ox = x; it.oy = y; return; } }
+  if (S.sel < 0){ const b = bbox(); S.floor.fx = x + b.x0; S.floor.fy = y + b.y0; }
+  else { setEffOx(S.sel, x); S.walls[S.sel].oy = y; }
+}
+function select(sel){
+  ITEM = null; EDIT = false; S.sel = sel; S.none = false; syncSet.clear(); V.wall.fit = true;
+  buildSync(); renderWallTable(); refreshPanel(); redraw();
+}
+function deselect(){ if (S.none && !ITEM) return; ITEM = null; EDIT = false; S.none = true; syncSet.clear(); renderWallTable(); refreshPanel(); redraw(); }
+function changed(){
+  scheduleSave(); scheduleSnap(); refreshPanel();
+  STAT = null; const A = getStat(); updateTableStats(A); updateTileStats(A);
+  redraw();
+}
+function fullRefresh(fit){
+  ftCache.key = ''; STAT = null; ITEM = null; EDIT = false;
+  $('#roomH').value = S.H;
+  renderTiles(); buildSync(); renderWallTable(); refreshPanel(); renderProjects();
+  if (fit){ V.plan.fit = V.wall.fit = V.unf.fit = true; V.cam.init = false; }
+  updateUI(); redraw();
+}
+
+/* магніт */
+function magnet(val, P, size, cands, thr){
+  let best = val, bd = thr;
+  for (const p of cands) for (const k of [0, -size, -size / 2, -size - (P - size) / 2]){
+    let d = mod(val - (p + k), P); if (d > P / 2) d -= P;
+    if (Math.abs(d) < bd){ bd = Math.abs(d); best = val - d; }
+  }
+  return best;
+}
+function applyDragOffs(sx, sy, du, dv, scale){
+  const c = cfg(curSurf()); if (!valid(c)) return;
+  let x = Math.round(sx + du), y = Math.round(sy + dv);
+  if (U.magnet && gridLike(c)){
+    const thr = 12 / scale; let cx, cy;
+    if (S.sel < 0){ const b = bbox(); cx = S.pts.map(p => p.x - b.x0); cy = S.pts.map(p => p.y - b.y0); cx.push((b.x1 - b.x0) / 2); cy.push((b.y1 - b.y0) / 2); }
+    else { const L = wallGeom(S.sel).L; cx = [0, L, L / 2]; cy = [0, S.H, S.H / 2]; }
+    x = r1(magnet(x, c.tw + c.j, c.tw, cx, thr)); y = r1(magnet(y, c.th + c.j, c.th, cy, thr));
+  }
+  setOffs(x, y);
+}
+
+/* ================= малювання: допоміжне ================= */
+function draw(){
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); getHatch();
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, Hh);
+  if (V.mode === 'plan'){ if (V.plan.fit) fitPlan(D.active && S.pts.length < 3 ? {x0:0, y0:0, x1:6000, y1:4000} : null); drawPlan(); }
+  else if (V.mode === 'wall'){ if (V.wall.fit) fitWall(); drawWall(); }
+  else if (V.mode === 'unfold'){ if (V.unf.fit) fitUnfold(); drawUnfold(); }
+  else { if (!V.cam.init) fit3D(); draw3D(); }
+  if (EDIT) drawEditOverlay();
+  $('#editBar').style.display = EDIT ? 'flex' : 'none';
+  drawRuler(); updateUI();
+}
+function poly2(pts){ ctx.beginPath(); pts.forEach((p, k) => k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); }
+const FONT = '-apple-system,system-ui,sans-serif';
+function badge(x, y, text, fill, ring, r){
+  r = r || 11;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = fill; ctx.fill();
+  if (ring){ ctx.lineWidth = 2; ctx.strokeStyle = ring; ctx.stroke(); }
+  ctx.fillStyle = '#fff'; ctx.font = `600 12px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y + .5);
+}
+function haloText(t, x, y, color, font){
+  ctx.font = font || `12px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.strokeStyle = C.halo; ctx.strokeText(t, x, y);
+  ctx.fillStyle = color || C.text; ctx.fillText(t, x, y);
+}
+function ambient(x, y, r){ return;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, 'rgba(110,140,225,.16)'); g.addColorStop(.55, 'rgba(110,140,225,.055)'); g.addColorStop(1, 'rgba(110,140,225,0)');
+  ctx.fillStyle = g; ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
+}
+function glowShape(pathFn){
+  ctx.save(); ctx.shadowColor = 'rgba(255,255,255,.3)'; ctx.shadowBlur = 16 * dpr; ctx.fillStyle = C.grout; pathFn(); ctx.fill(); ctx.restore();
+}
+function fillT(t, map, poly){
+  if (!t.poly && !poly){
+    const a = map(t.u0, t.v0), b = map(t.u1, t.v1);
+    ctx.fillRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])); return;
+  }
+  ctx.beginPath(); corners(t).forEach(([x, y], k) => { const q = map(x, y); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath(); ctx.fill();
+}
+function drawGrid(){
+  const s = V.plan.s, step = s * 100 >= 14 ? 100 : s * 500 >= 14 ? 500 : 1000;
+  const [x0, y0] = S2P(0, 0), [x1, y1] = S2P(W, Hh);
+  ctx.lineWidth = 1;
+  for (let x = Math.floor(x0 / step) * step; x <= x1; x += step){ const px = Math.round(x * s + V.plan.tx) + .5; ctx.strokeStyle = mod(x, 1000) === 0 ? C.gridM : C.grid; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, Hh); ctx.stroke(); }
+  for (let y = Math.floor(y0 / step) * step; y <= y1; y += step){ const py = Math.round(y * s + V.plan.ty) + .5; ctx.strokeStyle = mod(y, 1000) === 0 ? C.gridM : C.grid; ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke(); }
+}
+
+/* ---- розмірні лінії у стилі креслень ---- */
+let DIM_AUTO = false;
+function dimension(A, B, off, text, vertical, col){
+  if (!A || !B) return;
+  const a = [A[0] + off[0], A[1] + off[1]], b = [B[0] + off[0], B[1] + off[1]];
+  const ol = Math.hypot(off[0], off[1]) || 1, dx = off[0] / ol, dy = off[1] / ol;
+  ctx.save(); ctx.lineCap = 'butt'; ctx.strokeStyle = col || C.dim; ctx.lineWidth = .7;
+  for (const [P, p] of [[A, a], [B, b]]){ ctx.beginPath(); ctx.moveTo(P[0] + dx * 3, P[1] + dy * 3); ctx.lineTo(p[0] + dx * 5, p[1] + dy * 5); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+  ctx.lineWidth = 1.1;
+  for (const p of [a, b]){ ctx.beginPath(); ctx.moveTo(p[0] - 3, p[1] + 3); ctx.lineTo(p[0] + 3, p[1] - 3); ctx.stroke(); }
+  ctx.font = `300 10.5px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  const tw = ctx.measureText(text).width, len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  if (len >= tw + 6){
+    ctx.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    if (DIM_AUTO){ let an = Math.atan2(b[1] - a[1], b[0] - a[0]); if (an > Math.PI / 2) an -= Math.PI; else if (an <= -Math.PI / 2) an += Math.PI; ctx.rotate(an); }
+    else if (vertical) ctx.rotate(-Math.PI / 2);
+    ctx.lineWidth = 3; ctx.strokeStyle = C.halo; ctx.strokeText(text, 0, -3.5);
+    ctx.fillStyle = col || '#d1d1d6'; ctx.fillText(text, 0, -3.5);
+  }
+  ctx.restore();
+}
+function chain(pts, vals, off, vertical, ovOff){
+  if (!pts || pts.length < 2 || pts.some(p => !p)) return;
+  const n = vals.length; let i = 0;
+  while (i < n - 1){
+    const len = vals[i + 1] - vals[i]; let j = i + 1;
+    while (j < n - 1 && Math.abs(vals[j + 1] - vals[j] - len) < .6) j++;
+    if (j - i >= 3){ dimension(pts[i], pts[j], off, (j - i) + '×' + fmt(len), vertical); i = j; }
+    else { dimension(pts[i], pts[i + 1], off, fmt(len), vertical); i++; }
+  }
+  if (n > 2) dimension(pts[0], pts[n - 1], ovOff, fmt(vals[n - 1] - vals[0]), vertical);
+}
+function boundsOf(tiles, lo, hi, pickMax){
+  const rows = new Map();
+  for (const t of tiles){ if (t.r === undefined) continue; if (!rows.has(t.r)) rows.set(t.r, []); rows.get(t.r).push(t); }
+  if (!rows.size) return null;
+  const rs = [...rows.keys()].sort((a, b) => a - b);
+  let pick = rs[0]; if (pickMax) for (const r of rs) if (rows.get(r).length > rows.get(pick).length) pick = r;
+  const row = rows.get(pick).slice().sort((a, b) => a.u0 - b.u0);
+  const us = [lo.u], vs = [lo.v];
+  for (let k = 0; k < row.length - 1; k++){ const m = (row[k].u1 + row[k + 1].u0) / 2; if (m > lo.u + .5 && m < hi.u - .5) us.push(m); }
+  us.push(hi.u);
+  for (let k = 0; k < rs.length - 1; k++){ const a = rows.get(rs[k])[0], b = rows.get(rs[k + 1])[0], m = (a.v1 + b.v0) / 2; if (m > lo.v + .5 && m < hi.v - .5) vs.push(m); }
+  vs.push(hi.v);
+  return {us, vs};
+}
+function wallDims(i, mp, vertical){
+  const L = wallGeom(i).L, H = S.H, w = cfg(S.walls[i]);
+  let us = [0, L], vs = [0, H];
+  if (valid(w) && gridLike(w)){ const b = boundsOf(wallTiles(i), {u:0, v:0}, {u:L, v:H}, false); if (b){ us = b.us; vs = b.vs; } }
+  chain(us.map(u => mp(u, H)), us, [0, -24], false, [0, -44]);
+  if (vertical) chain(vs.map(v => mp(0, v)), vs, [-26, 0], true, [-46, 0]);
+}
+function floorDims(map){
+  const b = bbox(), f = cfg(S.floor);
+  let us = [b.x0, b.x1], vs = [b.y0, b.y1];
+  if (valid(f) && gridLike(f)){ const r = boundsOf(floorTiles(), {u:b.x0, v:b.y0}, {u:b.x1, v:b.y1}, true); if (r){ us = r.us; vs = r.vs; } }
+  chain(us.map(u => map(u, b.y0)), us, [0, -24], false, [0, -44]);
+  chain(vs.map(v => map(b.x0, v)), vs, [-26, 0], true, [-46, 0]);
+}
+
+/* ================= ПЛАН ================= */
+function badgePos(i){
+  const g = wallGeom(i), m = P2S(g.a.x + g.d.x * g.L / 2, g.a.y + g.d.y * g.L / 2);
+  return [m[0] - g.n.x * 24, m[1] - g.n.y * 24, m];
+}
+function renderFloor(map, s, o){
+  if (S.pts.length < 3) return;
+  const f = cfg(S.floor), sp = S.pts.map(p => map(p.x, p.y)), sel = fSel();
+  if (o.glow) glowShape(() => poly2(sp));
+  ctx.save();
+  poly2(sp); ctx.fillStyle = valid(f) ? C.grout : C.empty; ctx.fill(); ctx.clip();
+  if (valid(f)){
+    if (Math.min(f.tw, f.th) * s >= 2.5){ for (const t of floorTiles()){ paintT(f, t, map, o.poly); } }
+    else { ctx.fillStyle = f.color; ctx.fillRect(0, 0, W, Hh); }
+  }
+  if (sel){ ctx.fillStyle = 'rgba(10,132,255,.14)'; ctx.fillRect(0, 0, W, Hh); }
+  ctx.restore();
+  if (o.outline){ ctx.lineWidth = sel ? 2.5 : 1; ctx.strokeStyle = sel ? C.acc : 'rgba(255,255,255,.2)'; poly2(sp); ctx.stroke(); }
+}
+function drawPlan(){
+  drawGrid();
+  if (D.active){ if (S.pts.length >= 3){ ctx.save(); if (D.mode === 'room') ctx.globalAlpha = .28; drawRoomPlan(); ctx.restore(); } drawDrawing(); return; }
+  if (S.pts.length < 3) return;
+  drawRoomPlan();
+}
+function drawRoomPlan(){
+  const s = V.plan.s;
+  renderFloor(P2S, s, {glow:true});
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  for (let i = 0; i < S.pts.length; i++){
+    const g = wallGeom(i), a = P2S(g.a.x, g.a.y), bb = P2S(g.b.x, g.b.y), sel = wSel(i);
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(bb[0], bb[1]);
+    ctx.lineWidth = sel ? 6 : 3; ctx.strokeStyle = sel ? C.acc : C.line; ctx.stroke();
+  }
+  S.boxes.forEach((bx, k) => {
+    const isel = isSelItem('bx', 0, k), bc = cfg(bx); let fp;
+    if (bx.kind === 'prism' && bx.wall < 0){
+      const bb = polyBox(bx.poly); fp = bx.poly.map(p => P2S(p.x, p.y));
+      poly2(fp); ctx.fillStyle = valid(bc) ? C.grout : C.empty; ctx.fill();
+      const cap = valid(bc) ? itemFaces(bx).find(f => f.poly) : null, fc = cap ? fcfg(bx, cap) : null;
+      if (cap){ ctx.save(); poly2(fp); ctx.clip();
+        if (Math.min(fc.c.tw, fc.c.th) * s >= 2.5) for (const t of faceTiles(cap, fc.c, fc.ox, fc.oy)) paintT(fc.c, t, (x, y) => P2S(bb.x0 + x, bb.y0 + y), true, 1 + (k % 3));
+        else { ctx.fillStyle = bc.color; ctx.fillRect(0, 0, W, Hh); }
+        hatchOver(fc.c, 1 + (k % 3)); ctx.restore(); }
+    } else {
+      const g = wallGeom(bx.wall), pr = bx.kind === 'prism', bb = pr ? polyBox(bx.poly) : null, u0 = pr ? bb.x0 : bx.u, u1 = pr ? bb.x1 : bx.u + bx.w;
+      const pt = (u, fv) => P2S(g.a.x + g.d.x * u + g.n.x * fv, g.a.y + g.d.y * u + g.n.y * fv);
+      fp = [pt(u0, 0), pt(u1, 0), pt(u1, bx.d), pt(u0, bx.d)];
+      poly2(fp); ctx.fillStyle = valid(bc) ? C.grout : C.empty; ctx.fill();
+      if (!pr && valid(bc) && Math.min(bc.tw, bc.th) * s >= 2.5){ const fc = fcfg(bx, {n:'верх'}); ctx.save(); poly2(fp); ctx.clip(); for (const t of genTiles(fc.c, fc.ox, fc.oy, 0, 0, bx.w, bx.d, true)) paintT(fc.c, t, (x, y) => pt(bx.u + x, y), true, 1 + (k % 3)); hatchOver(fc.c, 1 + (k % 3)); ctx.restore(); }
+    }
+    if (isel){ poly2(fp); ctx.fillStyle = 'rgba(10,132,255,.2)'; ctx.fill(); }
+    ctx.lineWidth = isel ? 2.5 : 1.2; ctx.strokeStyle = isel ? C.acc : 'rgba(255,255,255,.45)'; poly2(fp); ctx.stroke(); ctx.setLineDash([]);
+  });
+  S.walls.forEach((w, i) => w.ops.forEach((op, j) => {
+    const g = wallGeom(i), A = P2S(g.a.x + g.d.x * op.u, g.a.y + g.d.y * op.u), B = P2S(g.a.x + g.d.x * (op.u + op.w), g.a.y + g.d.y * (op.u + op.w)), isel = isSelItem('op', i, j);
+    ctx.lineCap = 'butt'; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineWidth = 7; ctx.strokeStyle = C.bg; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineWidth = isel ? 2.5 : 1.2; ctx.strokeStyle = isel ? C.acc : (op.t === 'door' ? '#636366' : '#aeaeb2'); if (op.t === 'door' && !isel) ctx.setLineDash([5, 4]); ctx.stroke(); ctx.setLineDash([]); ctx.lineCap = 'round';
+  }));
+  for (let i = 0; i < S.pts.length; i++){
+    const bp = badgePos(i), sel = wSel(i);
+    badge(bp[0], bp[1], i + 1, sel ? C.acc : '#48484a', S.walls[i].link ? C.ok : null);
+  }
+  if (U.mk){ floorDims(P2S); planItemDims(); }
+}
+function dScr(p){ return D.mode === 'prismW' ? [V.wall.tx + p.x * V.wall.s, V.wall.ty - p.y * V.wall.s] : P2S(p.x, p.y); }
+function planItemDims(M){
+  const it = getItem(); if (!it) return; const AM = '#ffb340'; M = M || P2S;
+  if (ITEM.k === 'bx' && it.kind === 'prism' && it.wall < 0){
+    const bb = polyBox(it.poly), rb = bbox();
+    const xs = [rb.x0, bb.x0, bb.x1, rb.x1], ys = [rb.y0, bb.y0, bb.y1, rb.y1];
+    for (let k = 0; k < 3; k++){
+      if (xs[k + 1] - xs[k] > .5) dimension(M(xs[k], bb.y0), M(xs[k + 1], bb.y0), [0, -20], fmt(xs[k + 1] - xs[k]), false, AM);
+      if (ys[k + 1] - ys[k] > .5) dimension(M(bb.x0, ys[k]), M(bb.x0, ys[k + 1]), [-20, 0], fmt(ys[k + 1] - ys[k]), true, AM);
+    }
+    return;
+  }
+  const wi = ITEM.k === 'op' ? ITEM.w : it.wall, g = wallGeom(wi); let u0, u1, dd = 0;
+  if (ITEM.k === 'op'){ u0 = it.u; u1 = it.u + it.w; }
+  else if (it.kind === 'prism'){ const bb = polyBox(it.poly); u0 = bb.x0; u1 = bb.x1; dd = it.d; }
+  else { u0 = it.u; u1 = it.u + it.w; dd = it.d; }
+  const Pw = (u, d) => M(g.a.x + g.d.x * u + g.n.x * (d || 0), g.a.y + g.d.y * u + g.n.y * (d || 0)), hv = Math.abs(g.d.y) > Math.abs(g.d.x), off = [-g.n.x * 24, -g.n.y * 24], us = [0, u0, u1, g.L];
+  for (let k = 0; k < 3; k++) if (us[k + 1] - us[k] > .5) dimension(Pw(us[k]), Pw(us[k + 1]), off, fmt(us[k + 1] - us[k]), hv, AM);
+  if (dd > 0) dimension(Pw(u1, 0), Pw(u1, dd), [g.d.x * 24, g.d.y * 24], fmt(dd), Math.abs(g.n.y) > Math.abs(g.n.x), AM);
+}
+function candidate(){
+  if (!D.mouse) return null;
+  const w2 = D.mode === 'prismW', m = D.mouse, l = D.pts[D.pts.length - 1];
+  const raw = w2 ? {x:(m.x - V.wall.tx) / V.wall.s, y:(V.wall.ty - m.y) / V.wall.s} : (() => { const q = S2P(m.x, m.y); return {x:q[0], y:q[1]}; })();
+  D.closing = false;
+  if (l && D.buf !== ''){
+    const len = parseFloat(D.buf) || 0, dx = raw.x - l.x, dy = raw.y - l.y;
+    return Math.abs(dx) >= Math.abs(dy) ? {x:l.x + (dx >= 0 ? 1 : -1) * len, y:l.y} : {x:l.x, y:l.y + (dy >= 0 ? 1 : -1) * len};
+  }
+  const g = w2 ? 25 : 50; let p = {x:Math.round(raw.x / g) * g, y:Math.round(raw.y / g) * g}, snapped = false;
+  if (D.mode !== 'room'){
+    const verts = w2 ? (() => { const L = wallGeom(S.sel).L; return [{x:0, y:0}, {x:L, y:0}, {x:L, y:S.H}, {x:0, y:S.H}]; })() : S.pts;
+    for (const v of verts){ const q = dScr(v); if (Math.hypot(q[0] - m.x, q[1] - m.y) < 14){ p = {x:v.x, y:v.y}; snapped = true; break; } }
+  }
+  if (D.pts.length >= 3){
+    const f = dScr(D.pts[0]);
+    if (Math.hypot(f[0] - m.x, f[1] - m.y) < 20){ D.closing = true; return {x:D.pts[0].x, y:D.pts[0].y}; }
+  }
+  if (l && !D.free && !snapped){ if (Math.abs(p.x - l.x) > Math.abs(p.y - l.y)) p.y = l.y; else p.x = l.x; }
+  if (D.mode === 'prismF' && !insideRoom(p)) p = nearestBoundary(p);
+  if (w2){ const L = wallGeom(S.sel).L; p = {x:clamp(p.x, 0, L), y:clamp(p.y, 0, S.H)}; }
+  return p;
+}
+function drawDrawing(){
+  const c = candidate(), all = D.pts.slice();
+  const line = (a, b, dash, w, col) => {
+    const A = dScr(a), B = dScr(b);
+    ctx.setLineDash(dash || []); ctx.lineWidth = w; ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke(); ctx.setLineDash([]);
+    const L = Math.hypot(b.x - a.x, b.y - a.y);
+    if (L > 0) haloText(String(Math.round(L)), (A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - 13, '#9ec9ff', `600 12px ${FONT}`);
+  };
+  for (let i = 1; i < all.length; i++) line(all[i - 1], all[i], null, 3, C.line);
+  if (all.length && c) line(all[all.length - 1], c, [6, 5], 2, C.acc);
+  for (const p of all){ const q = dScr(p); ctx.beginPath(); ctx.arc(q[0], q[1], 4, 0, 7); ctx.fillStyle = C.text; ctx.fill(); }
+  if (all.length >= 3){ const q = dScr(all[0]); ctx.beginPath(); ctx.arc(q[0], q[1], 10, 0, 7); ctx.strokeStyle = D.closing ? C.ok : '#636366'; ctx.lineWidth = 2; ctx.stroke(); }
+  if (c){ const q = dScr(c); ctx.beginPath(); ctx.arc(q[0], q[1], 4, 0, 7); ctx.fillStyle = C.acc; ctx.fill(); }
+}
+
+/* ================= СТІНА ================= */
+function renderWall(i, mp, s, o){
+  const g = wallGeom(i), w = cfg(S.walls[i]), L = g.L, H = S.H, ok = valid(w), ox = effOx(i), oy = S.walls[i].oy;
+  const sel = wSel(i), P0 = mp(0, 0), P1 = mp(L, H);
+  const x0 = P0[0], x1 = P1[0], yb = P0[1], yt = P1[1], pitch = Math.min(w.tw, w.th) * s;
+  if (o.glow){ ambient((x0 + x1) / 2, (yb + yt) / 2, Math.max(x1 - x0, yb - yt) * .8 + 140); glowShape(() => { ctx.beginPath(); ctx.rect(x0, yt, x1 - x0, yb - yt); }); }
+  if (o.ghost && ok && pitch >= 3){
+    ctx.save(); ctx.globalAlpha = .045;
+    const mu = Math.min(600, W / s), mv = 500;
+    for (const t of genTiles(w, ox, oy, -mu, -mv, L + mu, H + mv, false)){ ctx.fillStyle = w.color; fillT(t, mp); }
+    ctx.restore();
+  }
+  ctx.fillStyle = ok ? C.grout : C.empty; ctx.fillRect(x0, yt, x1 - x0, yb - yt);
+  if (ok){
+    if (pitch >= 2.5){ for (const t of wallTiles(i)){ paintT(w, t, mp); } }
+    else { ctx.fillStyle = w.color; ctx.fillRect(x0, yt, x1 - x0, yb - yt); }
+  }
+  S.walls[i].ops.forEach((op, j) => {
+    const A = mp(op.u, op.v + op.h), B = mp(op.u + op.w, op.v), isel = isSelItem('op', i, j);
+    ctx.fillStyle = op.t === 'door' ? '#0e0e10' : '#2a3a4c'; ctx.fillRect(A[0], A[1], B[0] - A[0], B[1] - A[1]);
+    if (isel){ ctx.fillStyle = 'rgba(10,132,255,.3)'; ctx.fillRect(A[0], A[1], B[0] - A[0], B[1] - A[1]); }
+    ctx.lineWidth = isel ? 2.5 : 1; ctx.strokeStyle = isel ? C.acc : 'rgba(255,255,255,.4)'; ctx.strokeRect(A[0], A[1], B[0] - A[0], B[1] - A[1]);
+  });
+  S.boxes.forEach((bx, k) => {
+    if (bx.wall !== i) return;
+    const bc = cfg(bx), isel = isSelItem('bx', 0, k);
+    if (bx.kind === 'prism'){
+      const cap = itemFaces(bx).find(f => f.poly), bb = polyBox(bx.poly), q = bx.poly.map(p => mp(p.x, p.y));
+      ctx.save(); poly2(q); ctx.clip(); ctx.fillStyle = valid(bc) ? C.grout : C.empty; ctx.fillRect(0, 0, W, Hh);
+      { const fc = cap ? fcfg(bx, cap) : {c:bc, ox:0, oy:0}; if (valid(fc.c) && cap) for (const t of faceTiles(cap, fc.c, fc.ox, fc.oy)) paintT(fc.c, t, (x, y) => mp(bb.x0 + x, bb.y0 + y), true, 1 + (k % 3));
+      hatchOver(fc.c, 1 + (k % 3)); }
+      if (isel){ ctx.fillStyle = 'rgba(10,132,255,.22)'; ctx.fillRect(0, 0, W, Hh); }
+      ctx.restore();
+      ctx.lineWidth = isel ? 2.5 : 1; ctx.strokeStyle = isel ? C.acc : 'rgba(255,255,255,.4)'; poly2(q); ctx.stroke();
+      return;
+    }
+    const A = mp(bx.u, bx.v + bx.h), B = mp(bx.u + bx.w, bx.v);
+    ctx.fillStyle = valid(bc) ? C.grout : C.empty; ctx.fillRect(A[0], A[1], B[0] - A[0], B[1] - A[1]);
+    const fc = fcfg(bx, {n:'фасад'});
+    if (valid(fc.c)) for (const t of genTiles(fc.c, fc.ox, fc.oy, 0, 0, bx.w, bx.h, true)) paintT(fc.c, t, (x, y) => mp(bx.u + x, bx.v + y), false, 1 + (k % 3));
+    ctx.save(); ctx.beginPath(); ctx.rect(A[0], A[1], B[0] - A[0], B[1] - A[1]); ctx.clip(); hatchOver(fc.c, 1 + (k % 3)); ctx.restore();
+    if (isel){ ctx.fillStyle = 'rgba(10,132,255,.22)'; ctx.fillRect(A[0], A[1], B[0] - A[0], B[1] - A[1]); }
+    ctx.lineWidth = isel ? 2.5 : 1; ctx.strokeStyle = isel ? C.acc : 'rgba(255,255,255,.4)'; ctx.strokeRect(A[0], A[1], B[0] - A[0], B[1] - A[1]);
+  });
+  if (o.strip){
+    const D0 = 600, f = cfg(S.floor);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, yb, x1 - x0, D0 * s); ctx.fillStyle = '#222224'; ctx.fill(); ctx.clip();
+    const smap = (x, y) => { const rx = x - g.a.x, ry = y - g.a.y; return mp(rx * g.d.x + ry * g.d.y, -(rx * g.n.x + ry * g.n.y)); };
+    ctx.beginPath(); S.pts.forEach((p, k) => { const q = smap(p.x, p.y); k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+    ctx.fillStyle = valid(f) ? C.grout : C.empty; ctx.fill(); ctx.clip();
+    if (valid(f) && Math.min(f.tw, f.th) * s >= 2.5){ for (const t of floorTiles()){ paintT(f, t, smap, true); } }
+    ctx.restore();
+  }
+  ctx.lineWidth = sel ? 2.5 : 1; ctx.strokeStyle = sel ? (S.walls[i].link ? C.ok : C.acc) : 'rgba(255,255,255,.22)'; ctx.strokeRect(x0, yt, x1 - x0, yb - yt);
+  if (o.strip){ ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(x0 - 2, yb); ctx.lineTo(x1 + 2, yb); ctx.stroke(); }
+  if (o.badge){
+    badge(x0 + 14, yt - (U.mk ? 58 : 16), i + 1, sel ? C.acc : '#48484a', S.walls[i].link ? C.ok : null);
+    if (!U.mk) haloText(String(Math.round(L)), x0 + 34 + 16, yt - 16, '#aeaeb2', `12px ${FONT}`);
+  }
+  if (U.mk && ok) wallDims(i, mp, !!o.dimV);
+  if (U.mk) itemDims(i, mp);
+}
+function isSelItem(k, w, i){ return !!ITEM && !S.none && ITEM.k === k && (k === 'op' ? ITEM.w === w && ITEM.i === i : ITEM.i === i); }
+function itemDims(i, mp){
+  const L = wallGeom(i).L, H = S.H, rs = wallCovers(i), AM = '#ffb340'; if (!rs.length) return;
+  const us = [0, L]; rs.forEach(r => { us.push(clamp(r.u0, 0, L), clamp(r.u1, 0, L)); });
+  us.sort((a, b) => a - b);
+  const u2 = us.filter((u, k) => k === 0 || u - us[k - 1] > .5);
+  for (let k = 0; k < u2.length - 1; k++) dimension(mp(u2[k], H), mp(u2[k + 1], H), [0, -64], fmt(u2[k + 1] - u2[k]), false, AM);
+  for (const r of rs){
+    const x = Math.min(r.u1, L);
+    if (r.v0 > .5) dimension(mp(x, 0), mp(x, r.v0), [16, 0], fmt(r.v0), true, AM);
+    dimension(mp(x, r.v0), mp(x, r.v1), [16, 0], fmt(r.v1 - r.v0), true, AM);
+    if (H - r.v1 > .5) dimension(mp(x, r.v1), mp(x, H), [16, 0], fmt(H - r.v1), true, AM);
+  }
+}
+function drawWall(){
+  if (S.sel < 0 || S.pts.length < 3) return;
+  const i = S.sel, s = V.wall.s, mp = (u, v) => [V.wall.tx + u * s, V.wall.ty - v * s];
+  renderWall(i, mp, s, {ghost:true, strip:true, glow:true, dimV:true});
+  const L = wallGeom(i).L;
+  if (!U.mk){ haloText(`${i + 1} · ${Math.round(L)} × ${Math.round(S.H)}`, mp(L / 2, S.H)[0], mp(0, S.H)[1] - 18, '#aeaeb2', `12.5px ${FONT}`); }
+  if (D.active && D.mode === 'prismW') drawDrawing();
+}
+
+/* ================= РОЗГОРТКА ================= */
+function faceDims(sb, c, map){
+  const W = sb.W, H = sb.H; let us = [0, W], vs = [0, H];
+  if (gridLike(c) && !sb.f.poly){ const b = boundsOf(faceTiles(sb.f, c, sb.ox, sb.oy), {u:0, v:0}, {u:W, v:H}, false); if (b){ us = b.us; vs = b.vs; } }
+  const top = sb.y === 0;
+  chain(us.map(u => map(u, top ? H : 0)), us, [0, top ? -16 : 18], false, [0, top ? -34 : 36]);
+  if (sb.x === 0) chain(vs.map(v => map(0, v)), vs, [-18, 0], true, [-36, 0]);
+}
+function drawUnfoldPanels(L, s, X, Y){
+  for (const g of L.pans){
+    const vt = -(L.fgap + g.y), isel0 = isSelItem(g.ref.k, g.ref.w, g.ref.i);
+    if (g.hole){ ctx.fillStyle = '#141416'; ctx.fillRect(X(g.x + g.hole.x), Y(vt - g.hole.y), g.hole.W * s, g.hole.H * s); }
+    for (const sb of g.subs){
+      const isel = isel0 && (g.ref.k !== 'bx' || !ITEM.f || ITEM.f === sb.f.n);
+      const c = sb.c, ok = valid(c), top = vt - sb.y, map = (lx, ly) => [X(g.x + sb.x + lx), Y(top - sb.H + ly)];
+      const loc = sb.f.poly ? sb.f.poly.map(q => [q.x, q.y]) : [[0, 0], [sb.W, 0], [sb.W, sb.H], [0, sb.H]], q = loc.map(([x, y]) => map(x, y));
+      ctx.save(); poly2(q); ctx.clip(); ctx.fillStyle = ok ? C.grout : C.empty; ctx.fillRect(0, 0, W, Hh);
+      if (ok){
+        if (Math.min(c.tw, c.th, sb.W, sb.H) * s >= 1.5) for (const t of faceTiles(sb.f, c, sb.ox, sb.oy)) paintT(c, t, map, true, g.hi);
+        else { ctx.fillStyle = c.color; ctx.fillRect(0, 0, W, Hh); }
+      }
+      hatchOver(c, g.hi);
+      if (isel){ ctx.fillStyle = 'rgba(10,132,255,.22)'; ctx.fillRect(0, 0, W, Hh); }
+      ctx.restore();
+      ctx.lineWidth = isel ? 2.5 : 1; ctx.strokeStyle = isel ? C.acc : 'rgba(255,255,255,.35)'; poly2(q); ctx.stroke();
+      if (U.mk && ok) faceDims(sb, c, map);
+      if (sb.W * s >= 46 && sb.H * s >= 18) haloText(sb.f.n, X(g.x + sb.x + sb.W / 2), Y(top) + 11, '#aeaeb2', `10px ${FONT}`);
+    }
+    if (g.hole){ ctx.setLineDash([4, 3]); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.strokeRect(X(g.x + g.hole.x), Y(vt - g.hole.y), g.hole.W * s, g.hole.H * s); ctx.setLineDash([]); }
+    const cx = X(g.x + g.W / 2);
+    haloText(g.label, cx, Y(vt) - (U.mk ? 30 : 12), '#aeaeb2', `11px ${FONT}`);
+    const n = U.mk ? 0 : g.ref.k === 'op' ? (revStats(g.ref.w, S.walls[g.ref.w].ops[g.ref.i]) || {tiles:0}).tiles : boxStat(S.boxes[g.ref.i]).n;
+    if (n) haloText(n + ' шт', cx, Y(vt - g.H) + 15, '#d1d1d6', `500 12px ${FONT}`);
+  }
+}
+function drawUnfold(){
+  if (S.pts.length < 3) return;
+  const L = unfoldLayout(), s = V.unf.s, X = x => V.unf.tx + x * s, Y = v => V.unf.ty - v * s;
+  ambient(X(L.total / 2), Y(-(L.fgap + L.bh - S.H) / 2 - (S.H) / 2 + S.H / 2), Math.max(L.total, S.H + L.bh) * s * .75 + 120);
+  const fmap = (x, y) => [X(L.fx + x - L.b.x0), Y(-(L.fgap + y - L.b.y0))];
+  renderFloor(fmap, s, {outline:true, poly:true});
+  S.walls.forEach((_, i) => renderWall(i, (u, v) => [X(L.xs[i] + u), Y(v)], s, {badge:true}));
+  const A = getStat(), lab = (k, x, y) => { if (k && !U.mk) haloText(k.n + ' шт', x, y, '#d1d1d6', `500 13px ${FONT}`); };
+  S.walls.forEach((_, i) => lab(A.surf[i], X(L.xs[i] + wallGeom(i).L / 2), Y(0) + 20));
+  lab(A.surf[-1], X(L.bw / 2), Y(-(L.fgap + L.bh)) + 22);
+  drawUnfoldPanels(L, s, X, Y);
+  if (U.mk) floorDims(fmap);
+}
+
+/* ================= 3D ================= */
+const v3 = {
+  sub:(a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  dot:(a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross:(a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  norm:a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+};
+function draw3D(){
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, Hh);
+  V.hits = []; V.itemHits = []; V.hitFloor = null; V.cs = null; V.proj = null;
+  if (S.pts.length < 3) return;
+  const b = bbox(), cx = (b.x0 + b.x1) / 2, cz = (b.y0 + b.y1) / 2, ty = S.H * .4, c = V.cam;
+  const cp = [cx + c.dist * Math.cos(c.pitch) * Math.sin(c.yaw), ty + c.dist * Math.sin(c.pitch), cz + c.dist * Math.cos(c.pitch) * Math.cos(c.yaw)];
+  const fwd = v3.norm(v3.sub([cx, ty, cz], cp)), right = v3.norm(v3.cross(fwd, [0, 1, 0])), up = v3.cross(right, fwd);
+  const f = (FA.h / 2 + 120) / Math.tan(.42), near = 50, scx = FA.x + FA.w / 2 + c.px, scy = FA.y + FA.h / 2 + c.py;
+  V.cs = {cp, fwd, right, up, f, cx:scx, cy:scy};
+  const proj = p => {
+    const v = v3.sub(p, cp), z = v3.dot(v, fwd);
+    if (z < near) return null;
+    return [scx + f * v3.dot(v, right) / z, scy - f * v3.dot(v, up) / z, z];
+  };
+  V.proj = proj;
+  {
+    const camP = p => { const v = v3.sub(p, cp); return [v3.dot(v, right), v3.dot(v, up), v3.dot(v, fwd)]; };
+    const toS = q => [scx + f * q[0] / q[2], scy - f * q[1] / q[2]];
+    const seg = (p, q, al) => {
+      let a = camP(p), b = camP(q);
+      if (a[2] < near && b[2] < near) return;
+      if (a[2] < near){ const t = (near - a[2]) / (b[2] - a[2]); a = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, near]; }
+      else if (b[2] < near){ const t = (near - b[2]) / (a[2] - b[2]); b = [b[0] + (a[0] - b[0]) * t, b[1] + (a[1] - b[1]) * t, near]; }
+      const A = toS(a), B = toS(b); ctx.strokeStyle = `rgba(255,255,255,${al.toFixed(3)})`; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+    };
+    const R = 20000, st = 1000, gx = Math.round(cx / st) * st, gz = Math.round(cz / st) * st; ctx.lineWidth = 1;
+    for (let k = -R / st; k <= R / st; k++) for (let m = -R / st; m < R / st; m++){
+      const z = gz + k * st, x0 = gx + m * st, x = gx + k * st, z0 = gz + m * st;
+      const a1 = .22 * Math.pow(Math.max(0, 1 - Math.hypot(x0 + st / 2 - cx, z - cz) / R), 1.6);
+      const a2 = .22 * Math.pow(Math.max(0, 1 - Math.hypot(x - cx, z0 + st / 2 - cz) / R), 1.6);
+      if (a1 > .004) seg([x0, 0, z], [x0 + st, 0, z], a1);
+      if (a2 > .004) seg([x, 0, z0], [x, 0, z0 + st], a2);
+    }
+  }
+  const mid = proj([cx, S.H / 2, cz]);
+  if (mid) ambient(mid[0], mid[1], Math.max(b.x1 - b.x0, b.y1 - b.y0, S.H) * f / mid[2] * .95 + 100);
+  const fp = S.pts.map(p => proj([p.x, 0, p.y])), fl = cfg(S.floor);
+  if (fp.every(Boolean)){
+    V.hitFloor = fp.map(p => [p[0], p[1]]);
+    glowShape(() => poly2(fp));
+    ctx.save();
+    poly2(fp); ctx.fillStyle = valid(fl) ? C.grout : C.empty; ctx.fill(); ctx.clip();
+    const m0 = proj([cx, 0, cz]);
+    if (valid(fl)){
+      if (m0 && f * Math.min(fl.tw, fl.th) / m0[2] >= 2.5){
+        for (const t of floorTiles()){
+          const q = corners(t).map(([x, y]) => proj([x, 0, y]));
+          if (q.some(p => !p)) continue;
+          poly2(q); ctx.fillStyle = tileFill(fl, t); ctx.fill(); if (!t.full){ const hp = hatchFor(fl, 0); if (hp){ ctx.fillStyle = hp; ctx.fill(); } }
+        }
+      } else { ctx.fillStyle = fl.color; ctx.fillRect(0, 0, W, Hh); }
+    }
+    if (fSel()){ ctx.fillStyle = 'rgba(10,132,255,.2)'; ctx.fillRect(0, 0, W, Hh); }
+    ctx.restore();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = C.line; poly2(fp); ctx.stroke();
+  }
+  const vis = [];
+  for (let i = 0; i < S.pts.length; i++){
+    const g = wallGeom(i), mp = [g.a.x + g.d.x * g.L / 2, S.H / 2, g.a.y + g.d.y * g.L / 2], n3 = [g.n.x, 0, g.n.y];
+    if (v3.dot(n3, v3.sub(cp, mp)) <= 0) continue;
+    vis.push({i, g, n3, dist:Math.hypot(...v3.sub(cp, mp))});
+  }
+  vis.sort((a, b) => b.dist - a.dist);
+  const light = v3.norm([-.45, .8, .4]);
+  for (const o of vis){
+    const {i, g, n3} = o, w = cfg(S.walls[i]), ok = valid(w), sel = wSel(i);
+    const P = (u, v) => proj([g.a.x + g.d.x * u, v, g.a.y + g.d.y * u]);
+    const quad = [P(0, 0), P(g.L, 0), P(g.L, S.H), P(0, S.H)];
+    if (quad.some(p => !p)) continue;
+    poly2(quad); ctx.fillStyle = ok ? C.grout : C.empty; ctx.fill();
+    if (ok){
+      if (f * Math.min(w.tw, w.th) / o.dist >= 2.2){
+        for (const t of wallTiles(i)){
+          const q = corners(t).map(([u, v]) => P(u, v));
+          if (q.some(p => !p)) continue;
+          poly2(q); ctx.fillStyle = tileFill(w, t); ctx.fill(); if (!t.full){ const hp = hatchFor(w, 0); if (hp){ ctx.fillStyle = hp; ctx.fill(); } }
+        }
+      } else { poly2(quad); ctx.fillStyle = w.color; ctx.fill(); }
+    }
+    const shade = .74 + .26 * clamp(v3.dot(n3, light), 0, 1);
+    poly2(quad); ctx.fillStyle = `rgba(0,0,0,${(1 - shade).toFixed(3)})`; ctx.fill();
+    draw3DOps(i, g, proj, cp, light);
+    ctx.lineWidth = sel ? 3 : 1; ctx.strokeStyle = sel ? C.acc : 'rgba(255,255,255,.26)'; poly2(quad); ctx.stroke();
+    if (U.mk){ DIM_AUTO = true; wallDims(i, P, sel); itemDims(i, P); DIM_AUTO = false; }
+    const lp = P(g.L / 2, S.H * .74);
+    if (lp) badge(lp[0], lp[1], i + 1, sel ? C.acc : 'rgba(58,58,60,.95)', S.walls[i].link ? C.ok : null, 12);
+    V.hits.push({i, poly:quad.map(p => [p[0], p[1]])});
+  }
+  draw3DBoxes(proj, cp, light);
+  if (U.mk && ITEM && !S.none){ DIM_AUTO = true; planItemDims((x, y) => proj([x, 0, y])); DIM_AUTO = false; }
+}
+function drawFace3D(f, c, tl, ref, cp, proj, light){
+  if (v3.dot(f.nr, v3.sub(cp, f.m(0, 0))) <= 0) return;
+  const loc = f.poly ? f.poly.map(p => [p.x, p.y]) : [[0, 0], [f.W, 0], [f.W, f.H], [0, f.H]];
+  const q = loc.map(([x, y]) => proj(f.m(x, y))); if (q.some(p => !p)) return;
+  const isel = isSelItem(ref.k, ref.w, ref.i) && (ref.k !== 'bx' || !ITEM.f || ITEM.f === f.n);
+  ctx.save(); poly2(q); ctx.clip();
+  poly2(q); ctx.fillStyle = c ? (valid(c) ? C.grout : C.empty) : '#7a7a80'; ctx.fill();
+  if (c && valid(c)) for (const t of tl){
+    const tq = corners(t).map(([x, y]) => proj(f.m(x, y))); if (tq.some(p => !p)) continue;
+    poly2(tq); ctx.fillStyle = tileFill(c, t); ctx.fill(); if (!t.full){ const hp = hatchFor(c, ref.k === 'bx' ? 1 + (ref.i % 3) : 4); if (hp){ ctx.fillStyle = hp; ctx.fill(); } }
+  }
+  const sh = .74 + .26 * clamp(v3.dot(f.nr, light), 0, 1); poly2(q); ctx.fillStyle = `rgba(0,0,0,${(1 - sh).toFixed(3)})`; ctx.fill();
+  if (isel){ poly2(q); ctx.fillStyle = 'rgba(10,132,255,.2)'; ctx.fill(); }
+  ctx.restore();
+  ctx.lineWidth = isel ? 3 : 1; ctx.strokeStyle = isel ? C.acc : 'rgba(255,255,255,.3)'; poly2(q); ctx.stroke();
+  V.itemHits.push({ref, face:f, poly:q.map(p => [p[0], p[1]])});
+}
+function draw3DOps(i, g, proj, cp, light){
+  const w = S.walls[i], c = cfg(w);
+  w.ops.forEach((o, j) => {
+    const dd = o.d > 0 ? o.d : 100, u0 = o.u, u1 = o.u + o.w, v0 = o.v, v1 = o.v + o.h, ref = {k:'op', w:i, i:j}, isel = isSelItem('op', i, j);
+    const P3 = (u, v, dep) => proj([g.a.x + g.d.x * u - g.n.x * dep, v, g.a.y + g.d.y * u - g.n.y * dep]);
+    const back = [P3(u0, v0, dd), P3(u1, v0, dd), P3(u1, v1, dd), P3(u0, v1, dd)], front = [P3(u0, v0, 0), P3(u1, v0, 0), P3(u1, v1, 0), P3(u0, v1, 0)];
+    if (back.concat(front).some(p => !p)) return;
+    poly2(back); ctx.fillStyle = o.t === 'door' ? '#0d0d0f' : '#34495f'; ctx.fill();
+    const rc = (o.rev && valid(opCfg(i, o))) ? opCfg(i, o) : null;
+    for (const f of opFaces(i, o)) drawFace3D(f, rc, rc ? faceTiles(f, rc, o.ox || 0, o.oy || 0) : [], ref, cp, proj, light);
+    if (isel){ poly2(front); ctx.fillStyle = 'rgba(10,132,255,.25)'; ctx.fill(); }
+    ctx.lineWidth = isel ? 3 : 1.2; ctx.strokeStyle = isel ? C.acc : 'rgba(255,255,255,.4)'; poly2(front); ctx.stroke();
+    V.itemHits.push({ref, poly:front.map(p => [p[0], p[1]])});
+  });
+}
+function draw3DBoxes(proj, cp, light){
+  const items = S.boxes.map((b, k) => {
+    const fs = itemFaces(b), pts = fs.map(f => f.m(f.W / 2, f.H / 2)), n = pts.length || 1;
+    const cm = [0, 1, 2].map(a => pts.reduce((t, p) => t + p[a], 0) / n);
+    return {b, k, fs, dist:Math.hypot(...v3.sub(cp, cm))};
+  }).sort((a, b) => b.dist - a.dist);
+  for (const {b, k, fs} of items){
+    for (const f of fs){ const fc = fcfg(b, f); drawFace3D(f, fc.c, faceTiles(f, fc.c, fc.ox, fc.oy), {k:'bx', i:k}, cp, proj, light); }
+  }
+}
+function faceLocal(f, p){
+  const c = V.cs; if (!c) return null;
+  const O = f.m(0, 0), ex = v3.sub(f.m(1, 0), O), ey = v3.sub(f.m(0, 1), O), dx = (p.x - c.cx) / c.f, dy = -(p.y - c.cy) / c.f;
+  const d = [0, 1, 2].map(a => c.fwd[a] + c.right[a] * dx + c.up[a] * dy), nr = v3.cross(ex, ey), den = v3.dot(nr, d);
+  if (Math.abs(den) < 1e-12) return null;
+  const t = v3.dot(nr, v3.sub(O, c.cp)) / den, r = v3.sub([c.cp[0] + d[0] * t, c.cp[1] + d[1] * t, c.cp[2] + d[2] * t], O);
+  return {x:v3.dot(r, ex) / v3.dot(ex, ex), y:v3.dot(r, ey) / v3.dot(ey, ey)};
+}
+function hitItem3D(p){
+  const pt = {x:p.x, y:p.y}, h = V.itemHits || [];
+  for (let k = h.length - 1; k >= 0; k--) if (pointInPoly(pt, h[k].poly.map(q => ({x:q[0], y:q[1]})))) return h[k];
+  return null;
+}
+function hit3D(p){
+  for (let k = V.hits.length - 1; k >= 0; k--) if (pointInPoly({x:p.x, y:p.y}, V.hits[k].poly.map(q => ({x:q[0], y:q[1]})))) return {t:'wall', i:V.hits[k].i};
+  if (V.hitFloor && pointInPoly({x:p.x, y:p.y}, V.hitFloor.map(q => ({x:q[0], y:q[1]})))) return {t:'floor'};
+  return null;
+}
+function planePoint(px, py, sel){
+  const c = V.cs; if (!c) return null;
+  const a = (px - c.cx) / c.f, b = -(py - c.cy) / c.f;
+  const d = [c.fwd[0] + c.right[0] * a + c.up[0] * b, c.fwd[1] + c.right[1] * a + c.up[1] * b, c.fwd[2] + c.right[2] * a + c.up[2] * b];
+  const dl = Math.hypot(d[0], d[1], d[2]);
+  if (sel < 0){
+    if (Math.abs(d[1]) < 1e-6) return null;
+    const t = -c.cp[1] / d[1]; if (t <= 0) return null;
+    return {u:c.cp[0] + d[0] * t, v:c.cp[2] + d[2] * t, dist:t * dl};
+  }
+  const g = wallGeom(sel), n3 = [g.n.x, 0, g.n.y], den = v3.dot(d, n3);
+  if (Math.abs(den) < 1e-6) return null;
+  const t = v3.dot([g.a.x - c.cp[0], -c.cp[1], g.a.y - c.cp[2]], n3) / den; if (t <= 0) return null;
+  const P = [c.cp[0] + d[0] * t, c.cp[1] + d[1] * t, c.cp[2] + d[2] * t];
+  return {u:(P[0] - g.a.x) * g.d.x + (P[2] - g.a.y) * g.d.y, v:P[1], dist:t * dl};
+}
+
+/* ================= панель ================= */
+function setVal(sel, v){ const el = $(sel); if (document.activeElement !== el) el.value = v; }
+function patSVG(id, big){
+  const P = {'1':[15, 7, 1.5], '2':[15, 7, 1.5], '3':[15, 7, 1.5], '4':[15, 7, 1.5], chess:[8, 8, 1.2], hb:[14, 5, 1.2], dhb:[16, 4, 1], chev:[14, 5, 1.2], bsk:[9, 4.5, 1.2], pin:[14, 6, 1.2], hex:[9, 10.4, 1.2]}[id];
+  const tiles = genTiles({tw:P[0], th:P[1], j:P[2], pat:id, rot:0}, 2, 2, 2, 2, 38, 38, true);
+  let s = '<svg viewBox="0 0 40 40">';
+  for (const t of tiles){
+    const pts = corners(t).map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    s += `<polygon points="${pts}"${t.alt ? ' opacity=".55"' : ''}/>`;
+  }
+  return s + '</svg>';
+}
+function buildPats(){
+  const box = $('#pats'); box.innerHTML = '';
+  PATS.forEach(([k, name]) => {
+    const b = document.createElement('button'); b.className = 'pat'; b.dataset.p = k; b.title = name; b.setAttribute('aria-label', name); b.innerHTML = patSVG(k);
+    b.onclick = () => { targets().forEach(t => t.pat = k); changed(); };
+    box.appendChild(b);
+  });
+}
+function renderTileSel(){
+  const box = $('#tileSel'); box.innerHTML = '';
+  const cur = curSurf().tile;
+  S.tiles.forEach((t, k) => {
+    const b = document.createElement('button'); b.className = 'chip' + (k === cur ? ' on' : '');
+    const ok = t.tw > 0 && t.th > 0;
+    b.innerHTML = `<span class="dot${ok ? '' : ' empty'}" style="background:${t.color}"></span><span>${k + 1}</span>`;
+    b.onclick = () => { targets().forEach(s => s.tile = k); changed(); };
+    box.appendChild(b);
+  });
+}
+function buildSync(){
+  const l = $('#syncList'); l.innerHTML = '';
+  S.walls.forEach((w, i) => {
+    if (i === S.sel) return;
+    const b = document.createElement('button'); b.className = 'chip' + (syncSet.has(i) ? ' on' : ''); b.textContent = String(i + 1);
+    b.onclick = () => { syncSet.has(i) ? syncSet.delete(i) : syncSet.add(i); b.classList.toggle('on'); };
+    l.appendChild(b);
+  });
+}
+function insideRoom(p){ const n = S.pts.length; return pointInPoly(p, S.pts) || S.pts.some((a, i) => distSeg(p, a, S.pts[(i + 1) % n]) < 1.5); }
+function footprintPts(b){
+  if (b.kind === 'prism' && b.wall < 0) return b.poly;
+  const g = wallGeom(b.wall); let u0, u1;
+  if (b.kind === 'prism'){ const bb = polyBox(b.poly); u0 = bb.x0; u1 = bb.x1; } else { u0 = b.u; u1 = b.u + b.w; }
+  return [[u0, 0], [u1, 0], [u1, b.d], [u0, b.d], [(u0 + u1) / 2, 0], [(u0 + u1) / 2, b.d], [u0, b.d / 2], [u1, b.d / 2]].map(([u, d]) => ({x:g.a.x + g.d.x * u + g.n.x * d, y:g.a.y + g.d.y * u + g.n.y * d}));
+}
+function footprintOK(b){
+  if (b.kind === 'prism' && b.wall < 0){ const P = b.poly, n = P.length; return P.every((p, i) => insideRoom(p) && insideRoom({x:(p.x + P[(i + 1) % n].x) / 2, y:(p.y + P[(i + 1) % n].y) / 2})); }
+  return footprintPts(b).every(insideRoom);
+}
+function nearestBoundary(p){
+  let best = p, bd = 1e18; const n = S.pts.length;
+  for (let i = 0; i < n; i++){
+    const a = S.pts[i], b = S.pts[(i + 1) % n], dx = b.x - a.x, dy = b.y - a.y, t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1), q = {x:a.x + dx * t, y:a.y + dy * t}, d = Math.hypot(q.x - p.x, q.y - p.y);
+    if (d < bd){ bd = d; best = q; }
+  }
+  return best;
+}
+function applyField(o, f, v){
+  const isOp = ITEM.k === 'op', wi = isOp ? ITEM.w : o.wall, L = wi >= 0 ? wallGeom(wi).L : 0, H = S.H, old = Object.assign({}, o);
+  if (f === 'w'){ o.w = Math.min(v, L); if (o.u + o.w > L) o.u = Math.max(0, L - o.w); }
+  else if (f === 'u') o.u = clamp(v, 0, Math.max(0, L - o.w));
+  else if (f === 'h'){ o.h = Math.min(v, H); if (o.v + o.h > H) o.v = Math.max(0, H - o.h); }
+  else if (f === 'v') o.v = clamp(v, 0, Math.max(0, H - o.h));
+  else o[f] = v;
+  if (!isOp && (f === 'w' || f === 'u' || f === 'd') && !footprintOK(o)){
+    if (f === 'd'){ let lo = 0, hi = v; for (let k = 0; k < 24; k++){ const m = (lo + hi) / 2; o.d = m; if (footprintOK(o)) lo = m; else hi = m; } o.d = Math.floor(lo); }
+    else Object.assign(o, old);
+  }
+}
+function itemObj(it){ return it.k === 'op' ? S.walls[it.w].ops[it.i] : S.boxes[it.i]; }
+function itemName(it){
+  const o = itemObj(it); if (o.name) return o.name;
+  if (it.k === 'op'){ const ops = S.walls[it.w].ops, same = ops.filter(x => x.t === o.t), base = o.t === 'door' ? 'Двері' : 'Вікно'; return same.length > 1 ? `${base} ${same.indexOf(o) + 1}` : base; }
+  const same = S.boxes.filter(x => (x.kind === 'inst') === (o.kind === 'inst')), base = o.kind === 'inst' ? 'Інсталяція' : "Об'єм";
+  return same.length > 1 ? `${base} ${same.indexOf(o) + 1}` : base;
+}
+function cleanPoly(o){
+  if (!o || o.kind !== 'prism') return;
+  let P = o.poly.map(p => ({x:p.x, y:p.y})), ch = true;
+  while (ch && P.length > 3){
+    ch = false;
+    for (let i = 0; i < P.length; i++){
+      const a = P[(i - 1 + P.length) % P.length], b = P[i], c = P[(i + 1) % P.length];
+      if (Math.hypot(b.x - a.x, b.y - a.y) < 1 || Math.abs((b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)) < 1){ P.splice(i, 1); ch = true; break; }
+    }
+  }
+  o.poly = P;
+}
+function endEdit(){ const o = getItem(); if (EDIT && o) cleanPoly(o); EDIT = false; ftCache.key = ''; changed(); refreshPanel(); redraw(); }
+function polyValid(o){
+  if (o.wall < 0) return footprintOK(o);
+  const L = wallGeom(o.wall).L; return o.poly.every(p => p.x >= -.5 && p.x <= L + .5 && p.y >= -.5 && p.y <= S.H + .5) && footprintOK(o);
+}
+function renderVerts(it){
+  const box = $('#vertList'); if (!box) return;
+  const show = !!it && EDIT && ITEM.k === 'bx' && it.kind === 'prism';
+  box.style.display = show ? '' : 'none';
+  if (!show || box.contains(document.activeElement)) return;
+  box.innerHTML = '<div class="lbl" style="margin:12px 0 6px">Точки</div>';
+  it.poly.forEach((p, i) => {
+    const r = document.createElement('div'); r.className = 'row'; r.style.cssText = 'gap:6px;margin-bottom:6px';
+    const mk = k => { const inp = document.createElement('input'); inp.type = 'number'; inp.inputMode = 'decimal'; inp.value = Math.round(p[k]); inp.style.minWidth = '0';
+      inp.onchange = () => { const bak = {x:p.x, y:p.y}; p[k] = parseFloat(inp.value) || 0; if (!polyValid(it)){ p.x = bak.x; p.y = bak.y; inp.value = Math.round(p[k]); } changed(); }; return inp; };
+    r.append(mk('x'), mk('y'));
+    const add = document.createElement('button'); add.className = 'chip'; add.textContent = '+'; add.title = 'Додати точку';
+    add.onclick = () => { const q = it.poly[(i + 1) % it.poly.length]; it.poly.splice(i + 1, 0, {x:Math.round((p.x + q.x) / 2), y:Math.round((p.y + q.y) / 2)}); changed(); refreshPanel(); };
+    const del = document.createElement('button'); del.className = 'chip'; del.textContent = '×'; del.disabled = it.poly.length <= 3;
+    del.onclick = () => { if (it.poly.length <= 3) return; const old = it.poly.slice(); it.poly.splice(i, 1); if (!polyValid(it)) it.poly = old; changed(); refreshPanel(); };
+    r.append(add, del); box.appendChild(r);
+  });
+}
+function hasLayout(ref, o){ return ref.k === 'bx' || !!(o && o.rev); }
+function sameItem(a, b){ return !!a && !!b && a.k === b.k && a.i === b.i && (a.k !== 'op' || a.w === b.w); }
+function itemAt(p){
+  if (V.mode === 'wall') return hitItemWall(p);
+  if (V.mode === 'plan'){ const h = planHit(p.x, p.y, false); return h && h.t === 'box' ? {k:'bx', i:h.i} : h && h.t === 'op' ? {k:'op', w:h.w, i:h.j} : null; }
+  if (V.mode === 'unfold'){ const h = unfoldHit(p); return h && h.t === 'item' ? h.ref : null; }
+  if (V.mode === '3d'){ const h = hitItem3D(p); return h ? h.ref : null; }
+  return null;
+}
+function showCtx(x, y){ const m = $('#ctx'); m.style.display = 'flex'; m.style.left = clamp(x, 8, W - 170) + 'px'; m.style.top = clamp(y, 8, Hh - 110) + 'px'; }
+function hideCtx(){ $('#ctx').style.display = 'none'; }
+function startEdit(){
+  const o = getItem(); if (!o) return;
+  if (V.mode === 'unfold' || (V.mode === 'plan' && ITEM.k === 'op') || (V.mode === 'wall' && ITEM.k === 'bx' && o.wall < 0)) setMode(ITEM.k === 'bx' && o.wall < 0 ? 'plan' : 'wall');
+  EDIT = true; hideCtx(); setTab('layout'); refreshPanel(); redraw();
+}
+function editGeom(){
+  const o = getItem(); if (!o || S.none) return null;
+  const vtx = (pl, pre) => ({poly:pl, handles:pl.map((q, i) => ({x:q[0], y:q[1], id:pre + i}))});
+  if (V.mode === 'wall'){
+    const wi = ITEM.k === 'op' ? ITEM.w : o.wall; if (wi !== S.sel) return null;
+    const s = V.wall.s, mp = (u, v) => [V.wall.tx + u * s, V.wall.ty - v * s];
+    if (ITEM.k === 'bx' && o.kind === 'prism') return vtx(o.poly.map(q => mp(q.x, q.y)), 'v');
+    const a = mp(o.u, o.v + o.h), b = mp(o.u + o.w, o.v);
+    return {poly:[[a[0], a[1]], [b[0], a[1]], [b[0], b[1]], [a[0], b[1]]], handles:[{x:a[0], y:a[1], id:'tl'}, {x:b[0], y:a[1], id:'tr'}, {x:a[0], y:b[1], id:'bl'}, {x:b[0], y:b[1], id:'br'}]};
+  }
+  if (V.mode === 'plan'){
+    if (ITEM.k === 'op') return null;
+    if (o.kind === 'prism' && o.wall < 0) return vtx(o.poly.map(q => P2S(q.x, q.y)), 'v');
+    const g = wallGeom(o.wall), pr = o.kind === 'prism', bb = pr ? polyBox(o.poly) : null, u0 = pr ? bb.x0 : o.u, u1 = pr ? bb.x1 : o.u + o.w;
+    const Pw = (u, d) => P2S(g.a.x + g.d.x * u + g.n.x * d, g.a.y + g.d.y * u + g.n.y * d), A = Pw(u0, 0), B = Pw(u1, 0), C2 = Pw(u1, o.d), D2 = Pw(u0, o.d);
+    const hs = [{x:C2[0], y:C2[1], id:'fr'}, {x:D2[0], y:D2[1], id:'fl'}];
+    if (!pr) hs.push({x:A[0], y:A[1], id:'nl'}, {x:B[0], y:B[1], id:'nr'});
+    return {poly:[A, B, C2, D2], handles:hs};
+  }
+  return null;
+}
+function hitHandle(p, touch){
+  const gm = editGeom(); if (!gm) return null; const r = touch ? 24 : 14; let best = null, bd = r;
+  for (const h of gm.handles){ const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < bd){ bd = d; best = h; } }
+  return best;
+}
+function drawEditOverlay(){
+  const gm = editGeom(); if (!gm) return;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, W, Hh); gm.poly.forEach((p, k) => k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath();
+  ctx.fillStyle = 'rgba(58,58,62,.82)'; ctx.fill('evenodd');
+  ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.strokeStyle = 'rgba(255,255,255,.85)'; poly2(gm.poly); ctx.stroke(); ctx.setLineDash([]);
+  for (const h of gm.handles){ ctx.beginPath(); ctx.arc(h.x, h.y, 6.5, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = C.acc; ctx.stroke(); }
+  ctx.restore();
+}
+function dragHandle(p){
+  const o = getItem(), h = drag.h, s0 = drag.snap; if (!o) return;
+  const bak = JSON.parse(JSON.stringify(o)), restore = () => { Object.keys(bak).forEach(k => { o[k] = bak[k]; }); };
+  if (V.mode === 'wall'){
+    const wi = ITEM.k === 'op' ? ITEM.w : o.wall, L = wallGeom(wi).L, H = S.H, s = V.wall.s, thr = 12 / s, MIN = 50;
+    let mu = clamp(Math.round((p.x - V.wall.tx) / s), 0, L), mv = clamp(Math.round((V.wall.ty - p.y) / s), 0, H);
+    if (U.magnet){ if (mu < thr) mu = 0; if (L - mu < thr) mu = L; if (mv < thr) mv = 0; if (H - mv < thr) mv = H; }
+    if (h.id[0] === 'v'){ o.poly[+h.id.slice(1)] = {x:mu, y:mv}; }
+    else {
+      let u0 = s0.u, u1 = s0.u + s0.w, v0 = s0.v, v1 = s0.v + s0.h;
+      if (h.id.includes('l')) u0 = Math.min(mu, u1 - MIN); else u1 = Math.max(mu, u0 + MIN);
+      const fixedV = ITEM.k === 'op' ? o.t === 'door' : o.kind === 'inst';
+      if (h.id[0] === 't') v1 = Math.max(mv, v0 + MIN); else if (!fixedV) v0 = Math.min(mv, v1 - MIN);
+      o.u = u0; o.w = u1 - u0; o.v = v0; o.h = v1 - v0;
+    }
+    if (ITEM.k === 'bx' && !footprintOK(o)) restore();
+  } else if (V.mode === 'plan'){
+    const [x, y] = S2P(p.x, p.y), thr = 12 / V.plan.s;
+    if (h.id[0] === 'v'){
+      let q = {x:Math.round(x), y:Math.round(y)};
+      if (U.magnet){ const nb = nearestBoundary(q); if (Math.hypot(nb.x - q.x, nb.y - q.y) < thr) q = {x:Math.round(nb.x), y:Math.round(nb.y)}; }
+      o.poly[+h.id.slice(1)] = q; if (!footprintOK(o)) restore();
+    } else {
+      const g = wallGeom(o.wall), u = (x - g.a.x) * g.d.x + (y - g.a.y) * g.d.y, dd = (x - g.a.x) * g.n.x + (y - g.a.y) * g.n.y, L = g.L, MIN = 50;
+      let u0 = s0.u, u1 = s0.u + s0.w, nd = o.d;
+      let mu = clamp(Math.round(u), 0, L); if (U.magnet){ if (mu < thr) mu = 0; if (L - mu < thr) mu = L; }
+      if (o.kind !== 'prism'){ if (h.id.includes('l')) u0 = Math.min(mu, u1 - MIN); else u1 = Math.max(mu, u0 + MIN); o.u = u0; o.w = u1 - u0; }
+      if (h.id[0] === 'f'){
+        const want = Math.max(MIN, Math.round(dd)); o.d = want;
+        if (!footprintOK(o)){ let lo = bak.d, hi = want; if (!footprintOKwith(o, lo)){ restore(); changed(); return; } for (let k = 0; k < 24; k++){ const m = (lo + hi) / 2; o.d = m; if (footprintOK(o)) lo = m; else hi = m; } o.d = Math.floor(lo); }
+      }
+      if (!footprintOK(o)) restore();
+    }
+  }
+  changed();
+}
+function footprintOKwith(o, d){ const old = o.d; o.d = d; const r = footprintOK(o); o.d = old; return r; }
+function enterLayout(){ if (getItem()){ setTab('layout'); refreshPanel(); redraw(); } }
+function selectItem(it){
+  if (it.k === 'bx' && it.f === undefined){ const same = ITEM && sameItem(it, ITEM); it = Object.assign({}, it, {f:same ? ITEM.f : (S.boxes[it.i] ? defFace(S.boxes[it.i]) : undefined)}); }
+  if (!ITEM || ITEM.k !== it.k || ITEM.i !== it.i || ITEM.w !== it.w) EDIT = false;
+  ITEM = it; { const wi = it.k === 'op' ? it.w : S.boxes[it.i].wall; if (wi >= 0) S.sel = wi; } S.none = false; syncSet.clear();
+  setTab('layout'); buildSync(); renderWallTable(); refreshPanel(); redraw();
+}
+function fillItemFields(it){
+  const isOp = ITEM.k === 'op', pr = !isOp && it.kind === 'prism', inst = !isOp && it.kind === 'inst', door = isOp && it.t === 'door';
+  const show = pr ? {u:false, w:false, h:it.wall < 0, v:it.wall < 0, d:it.wall >= 0} : {u:true, w:true, h:!inst, v:!(door || inst), d:isOp ? !!it.rev : true};
+  document.querySelectorAll('[data-fw]').forEach(f => {
+    const k = f.dataset.fw, inp = f.querySelector('input'); f.style.display = show[k] ? '' : 'none';
+    if (document.activeElement !== inp) inp.value = Math.round((it[k] || 0) * 10) / 10;
+    if (k === 'd') f.querySelector('span').textContent = isOp ? 'Відкіс' : 'Глибина';
+  });
+  const nm = $('#itemName'); if (document.activeElement !== nm){ nm.value = it.name || ''; nm.placeholder = itemName(ITEM); }
+  $('#revBtn').style.display = isOp ? '' : 'none'; $('#revBtn').classList.toggle('on', !!it.rev);
+}
+function renderItemList(){
+  const box = $('#itemList'); box.innerHTML = '';
+  const add = (ref) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = itemName(ref); b.onclick = () => selectItem(ref); box.appendChild(b); };
+  S.walls[S.sel].ops.forEach((_, j) => add({k:'op', w:S.sel, i:j}));
+  S.boxes.forEach((b, k) => { if (b.wall === S.sel) add({k:'bx', i:k}); });
+  $('#itemsLbl').style.display = box.children.length ? '' : 'none';
+}
+function refreshPanel(){
+  if (S.sel >= S.walls.length) S.sel = S.walls.length ? 0 : -1;
+  const none = S.none || S.pts.length < 3;
+  $('#noSel').style.display = none ? '' : 'none'; $('#selWrap').style.display = none ? 'none' : '';
+  if (none) return;
+  if (ITEM && !getItem()) ITEM = null;
+  const it = getItem(), isOp = !!it && ITEM.k === 'op', isBx = !!it && ITEM.k === 'bx', fl = !it && S.sel < 0;
+  $('#selTitle').textContent = it ? itemName(ITEM) + (isBx && ITEM.f ? ' · ' + ITEM.f : '') : fl ? 'Підлога' : `Стіна ${S.sel + 1}`;
+  $('#itemWrap').style.display = it ? '' : 'none';
+  { const g2 = document.querySelector('#itemWrap .g2'); if (g2) g2.style.display = EDIT ? '' : 'none'; }
+  { const fr = $('#faceRow'); fr.innerHTML = ''; fr.style.display = isBx ? '' : 'none';
+    if (isBx){ [undefined, ...itemFaces(it).map(f => f.n)].forEach(n => { const b = document.createElement('button'); b.className = 'chip' + (ITEM.f === n ? ' on' : ''); b.textContent = n === undefined ? 'Усі' : n; b.onclick = () => { ITEM = Object.assign({}, ITEM, {f:n}); refreshPanel(); redraw(); }; fr.appendChild(b); }); } }
+  $('#tileBlock').style.display = ((isOp && !it.rev) || (it && EDIT)) ? 'none' : '';
+  $('#faceRow').style.display = (isBx && !EDIT) ? '' : 'none';
+  renderVerts(it);
+  $('#wallOnly').style.display = (!it && !fl) ? '' : 'none';
+  $('#linkRow').style.display = it ? 'none' : '';
+  const row = (a, b) => `<div><span>${a}</span><b>${b}</b></div>`;
+  let html = '';
+  if (it) fillItemFields(it);
+  if (!isOp || it.rev){
+    const sf = curSurf(), c = cfg(sf);
+    renderTileSel();
+    document.querySelectorAll('#pats .pat').forEach(b => b.classList.toggle('on', b.dataset.p === sf.pat));
+    document.querySelectorAll('#rotSeg button').forEach(b => b.classList.toggle('on', +b.dataset.rot === (sf.rot || 0)));
+    const o = getOffs(), grid = gridLike(c), Pu = c.tw + c.j, Pv = c.th + c.j;
+    setVal('#ox', valid(c) ? r1(grid ? mod(o.x, Pu) : o.x) : ''); setVal('#oy', valid(c) ? r1(grid ? mod(o.y, Pv) : o.y) : '');
+    $('#ox').disabled = $('#oy').disabled = !valid(c);
+    if (!it){
+      const lb = $('#linkBtn');
+      if (fl){ const any = S.walls.some(w => w.link); lb.textContent = any ? 'Відв\'язати' : 'Прив\'язати'; lb.classList.toggle('acc', any); lb.disabled = !any && !S.walls.some((_, i) => linkable(i)); }
+      else { const w = S.walls[S.sel]; lb.textContent = w.link ? 'Відв\'язати' : 'Прив\'язати'; lb.classList.toggle('acc', !!w.link); lb.disabled = !w.link && !linkable(S.sel); }
+    }
+    if (isBx || isOp){
+      const bs = isBx ? boxStat(it) : revStats(ITEM.w, it);
+      if (bs && valid(c)){ html = row('Цілих', bs.full) + row('Підрізаних', bs.cut) + row('З пачки · +10%', `${bs.n} · ${Math.ceil(bs.n * 1.1)}`) + row('Запил 45°', bs.miter.toFixed(2) + ' м.п.'); if (bs.narrow > 0) html += row('Вузькі', bs.narrow.toFixed(2) + ' м.п.'); }
+    } else if (valid(c)){
+      const tiles = fl ? floorTiles() : wallTiles(S.sel), pk = packTiles(tiles, c), nr = narrowStat(tiles);
+      html = row('Цілих', pk.full) + row('Підрізаних', pk.cut) + row('З пачки · +10%', `${pk.n} · ${Math.ceil(pk.n * 1.1)}`);
+      if (!fl){ const m = wallMiter(S.sel); if (m > 0) html += row('Запил 45°', m.toFixed(2) + ' м.п.'); }
+      if (nr.len > 0) html += row('Вузькі', nr.len.toFixed(2) + ' м.п.');
+    }
+  }
+  $('#stat').innerHTML = (it && EDIT) ? '' : html;
+  if (!it && !fl) renderItemList();
+}
+function updateTileStats(A){
+  let tot = 0, ar = 0, mi = 0, nw = 0, fu = 0, ct = 0;
+  A.per.forEach((p, k) => {
+    const n = p.full + p.bins; tot += n; ar += p.area; mi += p.miter; nw += p.narrow; fu += p.full; ct += p.cut;
+    const el = document.querySelector(`.tsum[data-k="${k}"]`); if (!el) return;
+    el.innerHTML = n ? `<b>${n} шт з пачки</b> · +10% ${Math.ceil(n * 1.1)}<br>цілих ${p.full} · підрізаних ${p.cut} · ${p.area.toFixed(1)} м²${p.miter > 0 ? ` · запил ${p.miter.toFixed(2)} м.п.` : ''}${p.narrow > 0 ? ` · вузькі ${p.narrow.toFixed(2)} м.п.` : ''}` : '—';
+  });
+  const g = $('#grand');
+  if (g) g.innerHTML = `<div><span>Цілих</span><b>${fu} шт</b></div><div><span>Підрізаних</span><b>${ct} шт</b></div><div><span>З пачки</span><b>${tot} шт</b></div><div><span>З запасом 10%</span><b>${Math.ceil(tot * 1.1)} шт</b></div><div><span>Площа</span><b>${ar.toFixed(1)} м²</b></div><div><span>Запил 45°</span><b>${mi.toFixed(2)} м.п.</b></div><div><span>Вузькі до 30 см</span><b>${nw.toFixed(2)} м.п.</b></div>`;
+}
+const FLOORSVG = '<svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M2 8h12M8 2v12"/></svg>';
+function renderTiles(){
+  const box = $('#tileList'); box.innerHTML = '';
+  S.tiles.forEach((t, k) => {
+    const d = document.createElement('div'); d.className = 'card';
+    d.innerHTML = `<div class="head"><span>Плитка ${k + 1}</span>${S.tiles.length > 1 ? '<button class="x" aria-label="Видалити">×</button>' : ''}</div>
+      <div class="tsum" data-k="${k}"></div>
+      <div class="g3">
+        <div class="field"><span>Ширина</span><input type="number" data-f="tw" placeholder="600" inputmode="decimal" min="0"></div>
+        <div class="field"><span>Висота</span><input type="number" data-f="th" placeholder="300" inputmode="decimal" min="0"></div>
+        <div class="field"><span>Шов</span><input type="number" data-f="j" placeholder="2" inputmode="decimal" min="0" step="0.5"></div>
+      </div>
+      <div class="row between" style="margin-top:12px"><div class="swatches"></div><button class="btn sm" data-swap aria-label="Повернути">⇄</button></div>
+      <div class="chips assign" style="margin-top:12px"></div>`;
+    d.querySelectorAll('input').forEach(inp => {
+      const f = inp.dataset.f; inp.value = t[f] == null ? '' : t[f];
+      inp.oninput = () => { const v = parseFloat(inp.value); t[f] = (v >= 0 && isFinite(v)) ? v : (f === 'j' ? 0 : null); changed(); };
+    });
+    const sw = d.querySelector('.swatches');
+    PALETTE.forEach(col => {
+      const b = document.createElement('button'); b.style.background = col; b.className = t.color === col ? 'on' : ''; b.setAttribute('aria-label', col);
+      b.onclick = () => { t.color = col; sw.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); changed(); };
+      sw.appendChild(b);
+    });
+    d.querySelector('[data-swap]').onclick = () => { const x = t.tw; t.tw = t.th; t.th = x; d.querySelector('[data-f=tw]').value = t.tw == null ? '' : t.tw; d.querySelector('[data-f=th]').value = t.th == null ? '' : t.th; changed(); };
+    const as = d.querySelector('.assign');
+    const mk = (html, sel) => {
+      const sf = sel < 0 ? S.floor : S.walls[sel], b = document.createElement('button');
+      b.className = 'chip' + (sf.tile === k ? ' on' : ''); b.innerHTML = html;
+      b.onclick = () => { sf.tile = k; renderTiles(); changed(); };
+      as.appendChild(b);
+    };
+    if (S.pts.length >= 3){ mk(FLOORSVG, -1); S.walls.forEach((_, i) => mk(String(i + 1), i)); }
+    const del = d.querySelector('.x');
+    if (del) del.onclick = () => {
+      S.tiles.splice(k, 1);
+      const fix = sf => { if (sf.tile === k) sf.tile = 0; else if (sf.tile > k) sf.tile--; };
+      S.walls.forEach(fix); fix(S.floor);
+      renderTiles(); changed();
+    };
+    box.appendChild(d);
+  });
+  updateTileStats(getStat());
+}
+$('#addTile').onclick = () => { S.tiles.push(tileDef(S.tiles.length)); renderTiles(); changed(); };
+function renderWallTable(){
+  const t = $('#wallTable'); t.innerHTML = '';
+  S.walls.forEach((w, i) => {
+    const tr = document.createElement('tr'); tr.className = (wSel(i) ? 'sel ' : '') + (w.link ? 'lnk' : '');
+    tr.innerHTML = `<td style="width:32px"><span class="badge">${i + 1}</span></td><td><input type="number" step="10" min="50" inputmode="numeric" value="${Math.round(wallGeom(i).L * 10) / 10}"></td><td class="st" id="st${i}"></td>`;
+    tr.querySelector('.badge').onclick = () => select(i);
+    const inp = tr.querySelector('input');
+    inp.onchange = () => { const v = parseFloat(inp.value); if (v > 0){ setWallLength(i, v); V.plan.fit = V.wall.fit = V.unf.fit = true; V.cam.init = false; renderWallTable(); changed(); } };
+    t.appendChild(tr);
+  });
+  updateTableStats(getStat());
+}
+function updateTableStats(A){
+  S.walls.forEach((w, i) => { const el = $('#st' + i); if (el){ const k = A.surf[i]; el.textContent = k ? `${k.full}+${k.open}` : '—'; } });
+}
+
+/* ---- проєкти ---- */
+function renderProjects(){
+  const box = $('#projList'); if (!box) return; box.innerHTML = '';
+  idx.list.forEach(p => {
+    const d = document.createElement('div'); d.className = 'proj' + (p.id === idx.cur ? ' cur' : '');
+    d.innerHTML = `<button class="nm"><b></b><i>${new Date(p.t).toLocaleDateString('uk-UA', {day:'numeric', month:'short'})}</i></button><button class="mi" data-a="r" aria-label="Перейменувати">✎</button><button class="mi" data-a="d" aria-label="Дублювати">⧉</button><button class="mi" data-a="x" aria-label="Видалити" style="color:#ff453a">✕</button>`;
+    d.querySelector('b').textContent = p.name;
+    d.querySelector('.nm').onclick = () => { if (p.id !== idx.cur) openProject(p.id); };
+    d.querySelector('[data-a=r]').onclick = () => { const n = prompt('Назва', p.name); if (n && n.trim()){ p.name = n.trim(); saveIndex(); renderProjects(); } };
+    d.querySelector('[data-a=d]').onclick = () => { saveNow(); const src = readProject(p.id); if (!src) return; const nid = uid(); try { localStorage.setItem(PKEY(nid), JSON.stringify(src)); } catch (e) {} idx.list.unshift({id:nid, name:p.name + ' копія', t:Date.now()}); saveIndex(); renderProjects(); };
+    d.querySelector('[data-a=x]').onclick = () => { if (confirm('Видалити проєкт?')) delProject(p.id); };
+    box.appendChild(d);
+  });
+}
+function switchTo(data){
+  D.active = false; D.pts = []; D.buf = ''; R.a = R.b = null;
+  S = data || defState(); normalize(); histReset(); syncSet.clear();
+  fullRefresh(true); setMode('plan', true);
+  if (!S.pts.length) startDraw();
+}
+function newProject(){
+  saveNow(); const id = uid();
+  idx.list.unshift({id, name:'Проєкт ' + (idx.list.length + 1), t:Date.now()}); idx.cur = id; saveIndex();
+  switchTo(null); saveNow();
+}
+function openProject(id){ saveNow(); idx.cur = id; saveIndex(); switchTo(readProject(id)); }
+function delProject(id){
+  try { localStorage.removeItem(PKEY(id)); } catch (e) {}
+  idx.list = idx.list.filter(p => p.id !== id);
+  if (!idx.list.length){ idx.cur = null; const nid = uid(); idx.list.push({id:nid, name:'Проєкт 1', t:Date.now()}); idx.cur = nid; saveIndex(); switchTo(null); }
+  else if (id === idx.cur){ idx.cur = idx.list[0].id; saveIndex(); switchTo(readProject(idx.cur)); }
+  else { saveIndex(); renderProjects(); }
+}
+$('#pNew').onclick = newProject;
+$('#btnSave').onclick = () => {
+  const blob = new Blob([JSON.stringify(S, null, 1)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rozkladka.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('#btnLoad').onclick = () => $('#file').click();
+$('#file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try { d = JSON.parse(r.result); } catch (err){ alert('Не вдалося прочитати файл.'); return; }
+    saveNow(); const id = uid(); idx.list.unshift({id, name:f.name.replace(/\.json$/i, '') || 'Імпорт', t:Date.now()}); idx.cur = id; saveIndex(); switchTo(d); saveNow();
+  };
+  r.readAsText(f); e.target.value = '';
+};
+
+/* ---- вкладки / режими / інструменти ---- */
+function setTab(t){
+  tab = t;
+  document.querySelectorAll('#tabSeg button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('#panel section').forEach(s => s.classList.toggle('on', s.id === 'tab-' + t));
+  layout();
+}
+document.querySelectorAll('#tabSeg button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+function setPanel(open){ panelOpen = open; $('#panel').classList.toggle('hidden', !open); $('#btnPanel').classList.toggle('on', open); layout(); redraw(); }
+$('#btnPanel').onclick = () => setPanel(!panelOpen);
+function setMode(m, silent){
+  if (m === 'wall' && S.sel < 0) S.sel = 0;
+  if (m === 'wall') S.none = false;
+  if (D.active && !(D.mode === 'prismW' ? m === 'wall' : m === 'plan')) cancelDraw();
+  V.mode = m; R.a = R.b = null;
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  if (m === 'plan') V.plan.fit = true;
+  if (m === 'wall') V.wall.fit = true;
+  if (m === 'unfold') V.unf.fit = true;
+  if (m === '3d') V.cam.init = false;
+  buildSync(); renderWallTable(); refreshPanel(); redraw();
+}
+document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$('#tFit').onclick = () => { layout(); if (V.mode === 'plan') V.plan.fit = true; else if (V.mode === 'wall') V.wall.fit = true; else if (V.mode === 'unfold') V.unf.fit = true; else { V.cam.init = false; V.cam.yaw = .55; V.cam.pitch = .6; } redraw(); };
+$('#tRuler').onclick = () => { closeAdd(); R.on = !R.on; R.a = R.b = null; redraw(); };
+$('#tMark').onclick = () => { U.mk = !U.mk; redraw(); };
+$('#tMagnet').onclick = () => { U.magnet = !U.magnet; redraw(); };
+function setLinkAll(on){
+  S.walls.forEach((w, i) => { if (on){ if (linkable(i)) w.link = true; } else if (w.link){ w.ox = effOx(i); w.link = false; } });
+  changed();
+}
+$('#tLink').onclick = () => { const all = S.walls.filter((_, i) => linkable(i)); setLinkAll(!(all.length && all.every(w => w.link))); };
+$('#tPencil').onclick = () => { R.on = false; closeAdd(); startDraw(); };
+$('#tCursor').onclick = () => { R.on = false; R.a = R.b = null; closeAdd(); redraw(); };
+$('#dbBack').onclick = () => { if (D.buf) D.buf = ''; else D.pts.pop(); redraw(); };
+$('#bUndo').onclick = undo; $('#bRedo').onclick = redo;
+$('#wprev').onclick = () => select((S.sel - 1 + S.walls.length) % S.walls.length);
+$('#wnext').onclick = () => select((S.sel + 1) % S.walls.length);
+
+function noteText(){
+  if (D.active || S.none || S.pts.length < 3) return '';
+  if (!valid(cfg(curSurf()))) return 'Задайте розмір плитки';
+  return '';
+}
+function updateUI(){
+  const n = $('#note'), t = noteText();
+  n.style.display = t ? 'block' : 'none'; n.textContent = t;
+  $('#drawbar').style.display = D.active ? 'flex' : 'none';
+  $('#tools').style.display = D.active ? 'none' : 'flex';
+  $('#tRuler').classList.toggle('on', R.on); $('#tCursor').classList.toggle('on', !R.on); $('#tMark').classList.toggle('on', U.mk); $('#tMagnet').classList.toggle('on', U.magnet);
+  const all = S.pts.length >= 3 ? S.walls.filter((_, i) => linkable(i)) : [];
+  $('#tLink').classList.toggle('on', all.length > 0 && all.every(w => w.link));
+  $('#bUndo').disabled = HI.i <= 0; $('#bRedo').disabled = HI.i >= HI.a.length - 1;
+  const nav = V.mode === 'wall' && S.walls.length > 1 && !D.active;
+  $('#wprev').style.display = nav ? 'flex' : 'none'; $('#wnext').style.display = nav ? 'flex' : 'none';
+}
+
+/* ---- креслення контуру ---- */
+function startDraw(mode){ mode = (typeof mode === 'string') ? mode : 'room'; D.active = false; setMode(mode === 'prismW' ? 'wall' : 'plan'); D.mode = mode; D.active = true; D.pts = []; D.buf = ''; D.mouse = null; if (mode === 'room') V.plan.fit = true; redraw(); }
+function finishPrism(){
+  const pts = [];
+  for (const p of D.pts){ const l = pts[pts.length - 1]; if (!l || Math.hypot(l.x - p.x, l.y - p.y) > 1) pts.push(p); }
+  if (pts.length > 1 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1) pts.pop();
+  if (pts.length < 3 || Math.abs(area(pts)) < 1000){ alert('Контур замалий.'); return; }
+  const w = D.mode === 'prismW', poly = pts.map(p => ({x:Math.round(p.x * 10) / 10, y:Math.round(p.y * 10) / 10}));
+  if (area(poly) < 0) poly.reverse();
+  const b = Object.assign(boxDef(), {kind:'prism', wall:w ? S.sel : -1, poly, h:w ? 0 : 900, d:w ? 200 : 0, v:0, tile:w ? S.walls[S.sel].tile : S.floor.tile});
+  S.boxes.push(b); D.active = false; D.pts = []; D.buf = '';
+  ITEM = {k:'bx', i:S.boxes.length - 1}; S.none = false; setTab('layout'); renderWallTable(); changed(); redraw();
+}
+function cancelDraw(){ D.active = false; D.pts = []; D.buf = ''; V.plan.fit = true; redraw(); }
+function finishDraw(){
+  if (D.mode !== 'room') return finishPrism();
+  const pts = [];
+  for (const p of D.pts){ const l = pts[pts.length - 1]; if (!l || Math.hypot(l.x - p.x, l.y - p.y) > 1) pts.push(p); }
+  if (pts.length > 1 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1) pts.pop();
+  if (pts.length < 3 || Math.abs(area(pts)) < 1000){ alert('Контур замалий.'); return; }
+  setRoom(pts);
+  D.active = false; D.pts = []; D.buf = ''; syncSet.clear();
+  fullRefresh(true); snapNow(); saveNow();
+}
+$('#btnDraw').onclick = () => startDraw();
+$('#dbCancel').onclick = cancelDraw;
+$('#dbClose').onclick = () => { if (D.pts.length >= 3) finishDraw(); };
+document.querySelectorAll('#drawbar [data-dir]').forEach(b => b.onclick = () => {
+  const len = parseFloat($('#dbLen').value); if (!(len > 0)){ $('#dbLen').focus(); return; }
+  let [dx, dy] = b.dataset.dir.split(',').map(Number); if (D.mode === 'prismW') dy = -dy;
+  if (!D.pts.length) D.pts.push(D.mode === 'prismF' ? {x:bbox().x0, y:bbox().y0} : {x:0, y:0});
+  const l = D.pts[D.pts.length - 1];
+  D.pts.push({x:l.x + dx * len, y:l.y + dy * len});
+  if (D.mode !== 'room'){ redraw(); return; }
+  const bb = polyBox(D.pts); bb.x0 = Math.min(bb.x0, 0); bb.y0 = Math.min(bb.y0, 0); bb.x1 = Math.max(bb.x1, 3000); bb.y1 = Math.max(bb.y1, 2000);
+  fitPlan(bb); redraw();
+});
+$('#roomH').oninput = e => { const v = parseFloat(e.target.value); if (v >= 500){ S.H = v; V.wall.fit = V.unf.fit = true; V.cam.init = false; changed(); } };
+
+/* ---- об'єкти ---- */
+function closeAdd(){ $('#addMenu').classList.remove('show'); }
+$('#tAdd').onclick = e => { e.stopPropagation(); $('#addMenu').classList.toggle('show'); };
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#addMenu') && !e.target.closest('#tAdd')) closeAdd(); });
+function addItem(kind){
+  closeAdd();
+  if (S.pts.length < 3) return;
+  const wi = (S.sel >= 0) ? S.sel : 0, L = wallGeom(wi).L;
+  if (kind === 'box'){ startDraw(V.mode === 'wall' ? 'prismW' : 'prismF'); return; }
+  if (kind === 'door' || kind === 'win'){
+    const w = Math.min(kind === 'door' ? 900 : 1200, L), o = {t:kind, u:Math.max(0, Math.round((L - w) / 2)), v:kind === 'door' ? 0 : 900, w, h:kind === 'door' ? 2100 : 1400, rev:false, d:100, tile:null, pat:'1', rot:0, ox:0, oy:0};
+    S.walls[wi].ops.push(o); ITEM = {k:'op', w:wi, i:S.walls[wi].ops.length - 1};
+  } else {
+    const w = Math.min(600, L), b = Object.assign(boxDef(), {kind, wall:wi, u:Math.max(0, Math.round((L - w) / 2)), w, d:kind === 'inst' ? 200 : 300, h:kind === 'inst' ? 1200 : 600, v:kind === 'inst' ? 0 : 900, tile:S.walls[wi].tile});
+    S.boxes.push(b); ITEM = {k:'bx', i:S.boxes.length - 1};
+  }
+  S.sel = wi; S.none = false; setTab('layout'); renderWallTable(); changed();
+}
+document.querySelectorAll('#addMenu [data-add]').forEach(b => b.onclick = () => addItem(b.dataset.add));
+function deleteItem(){
+  const it = getItem(); if (!it) return;
+  if (ITEM.k === 'op') S.walls[ITEM.w].ops.splice(ITEM.i, 1); else S.boxes.splice(ITEM.i, 1);
+  ITEM = null; renderWallTable(); changed();
+}
+$('#itemDel').onclick = deleteItem;
+$('#itemName').oninput = e => { const it = getItem(); if (it){ it.name = e.target.value; changed(); } };
+$('#revBtn').onclick = () => { const it = getItem(); if (it){ it.rev = !it.rev; changed(); } };
+document.querySelectorAll('[data-if]').forEach(inp => inp.oninput = () => {
+  const it = getItem(); if (!it) return;
+  const v = parseFloat(inp.value), f = inp.dataset.if; if (!(v >= 0)) return;
+  if (f !== 'u' && f !== 'v' && v <= 0) return;
+  applyField(it, f, v); changed();
+});
+
+/* ---- поля розкладки ---- */
+document.querySelectorAll('#rotSeg button').forEach(b => b.onclick = () => { targets().forEach(t => t.rot = +b.dataset.rot); changed(); });
+function offInput(which){
+  return e => {
+    const t = parseFloat(e.target.value); if (!isFinite(t)) return;
+    const o = getOffs(), c = o.cfg; if (!valid(c)) return;
+    let x = o.x, y = o.y;
+    if (!gridLike(c)){ if (which === 'x') x = t; else y = t; }
+    else if (which === 'x') x = (o.x - mod(o.x, c.tw + c.j)) + t; else y = (o.y - mod(o.y, c.th + c.j)) + t;
+    setOffs(x, y); changed();
+  };
+}
+$('#ox').oninput = offInput('x'); $('#oy').oninput = offInput('y');
+$('#linkBtn').onclick = () => {
+  if (S.sel < 0){ const any = S.walls.some(w => w.link); setLinkAll(!any); return; }
+  const w = S.walls[S.sel];
+  if (w.link){ w.ox = effOx(S.sel); w.link = false; } else if (linkable(S.sel)) w.link = true;
+  changed();
+};
+$('#syncAll').onclick = () => { S.walls.forEach((_, i) => { if (i !== S.sel) syncSet.add(i); }); buildSync(); };
+$('#syncCopy').onclick = () => {
+  const c = S.walls[S.sel], ox = effOx(S.sel);
+  syncSet.forEach(i => { if (i === S.sel) return; const t = S.walls[i]; t.tile = c.tile; t.pat = c.pat; t.rot = c.rot; t.oy = c.oy; if (!(t.link && linkable(i))) t.ox = ox; });
+  changed();
+};
+
+function deleteWall(i){
+  const n = S.pts.length;
+  ITEM = null;
+  if (n <= 3){ S.pts = []; S.walls = []; S.boxes = []; S.sel = -1; S.none = false; }
+  else { const j = (i + 1) % n; S.pts.splice(j, 1); S.walls.splice(j, 1); S.boxes = S.boxes.filter(b => b.wall !== j).map(b => { if (b.wall > j) b.wall--; return b; }); S.sel = Math.min(i, S.pts.length - 1); S.none = false; }
+  syncSet.clear(); fullRefresh(true); snapNow(); saveNow();
+}
+
+/* ================= рулетка ================= */
+function snapPlan(p){
+  let best = null, bd = 14;
+  const test = (x, y) => { const q = P2S(x, y), d = Math.hypot(q[0] - p.x, q[1] - p.y); if (d < bd){ bd = d; best = {x, y}; } };
+  S.pts.forEach(v => test(v.x, v.y));
+  const f = cfg(S.floor);
+  if (valid(f) && Math.min(f.tw, f.th) * V.plan.s > 8) for (const t of floorTiles()) for (const c of corners(t)) test(c[0], c[1]);
+  if (best) return best;
+  const [x, y] = S2P(p.x, p.y); return {x:Math.round(x), y:Math.round(y)};
+}
+function snapWall(p){
+  const g = wallGeom(S.sel), s = V.wall.s; let best = null, bd = 14;
+  const test = (u, v) => { const d = Math.hypot(V.wall.tx + u * s - p.x, V.wall.ty - v * s - p.y); if (d < bd){ bd = d; best = {x:u, y:v}; } };
+  [[0, 0], [g.L, 0], [g.L, S.H], [0, S.H]].forEach(c => test(c[0], c[1]));
+  const w = cfg(S.walls[S.sel]);
+  if (valid(w) && Math.min(w.tw, w.th) * s > 8) for (const t of wallTiles(S.sel)) for (const c of corners(t)) test(c[0], c[1]);
+  if (best) return best;
+  return {x:Math.round((p.x - V.wall.tx) / s), y:Math.round((V.wall.ty - p.y) / s)};
+}
+function rulerPt(p){
+  let pt = null;
+  if (V.mode === 'plan') pt = snapPlan(p);
+  else if (V.mode === 'wall') pt = snapWall(p);
+  else if (V.mode === 'unfold') pt = {x:Math.round((p.x - V.unf.tx) / V.unf.s), y:Math.round((V.unf.ty - p.y) / V.unf.s)};
+  else {
+    const h = hit3D(p); if (!h) return null;
+    const pp = planePoint(p.x, p.y, h.t === 'floor' ? -1 : h.i); if (!pp) return null;
+    if (h.t === 'floor') pt = {x:pp.u, y:0, z:pp.v};
+    else { const g = wallGeom(h.i); pt = {x:g.a.x + g.d.x * pp.u, y:pp.v, z:g.a.y + g.d.y * pp.u}; }
+  }
+  return pt;
+}
+function rulerTap(p){
+  const pt = rulerPt(p); if (!pt) return;
+  if (!R.a || R.b){ R.a = pt; R.b = null; } else R.b = pt;
+  redraw();
+}
+function drawRuler(){
+  if (!R.on || !R.a || D.active) return;
+  const m = V.mode;
+  const map = m === 'plan' ? (q => P2S(q.x, q.y)) : m === 'wall' ? (q => [V.wall.tx + q.x * V.wall.s, V.wall.ty - q.y * V.wall.s])
+    : m === 'unfold' ? (q => [V.unf.tx + q.x * V.unf.s, V.unf.ty - q.y * V.unf.s])
+    : (q => { const r = V.proj && V.proj([q.x, q.y, q.z]); return r ? [r[0], r[1]] : null; });
+  const A = map(R.a), B = R.b ? map(R.b) : null;
+  ctx.save(); ctx.lineCap = 'round';
+  if (A && B){ ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.stroke(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffd60a'; ctx.stroke(); }
+  for (const P of [A, B]) if (P){ ctx.beginPath(); ctx.arc(P[0], P[1], 5, 0, 7); ctx.fillStyle = '#ffd60a'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.stroke(); }
+  if (A && B){
+    const dx = R.b.x - R.a.x, dy = R.b.y - R.a.y, dz = (R.b.z || 0) - (R.a.z || 0);
+    const d = m === '3d' ? Math.hypot(dx, dy, dz) : Math.hypot(dx, dy);
+    let t = Math.round(d) + ' мм';
+    if (m !== '3d') t += `  (${Math.round(Math.abs(dx))} · ${Math.round(Math.abs(dy))})`;
+    haloText(t, (A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - 16, '#ffd60a', `600 13px ${FONT}`);
+  }
+  ctx.restore();
+}
+
+/* ================= вказівники ================= */
+let drag = null, spaceDown = false, pinch = null, lastTap = null;
+const ptrs = new Map();
+const pos = e => { const r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
+cv.oncontextmenu = e => { e.preventDefault(); if (D.active || R.on) return; const hit = itemAt(pos(e)); if (hit){ selectItem(hit); const q = pos(e); showCtx(q.x, q.y); } };
+$('#ctxEdit').onclick = startEdit;
+$('#ctxDel').onclick = () => { hideCtx(); if (getItem()) deleteItem(); };
+$('#editOk').onclick = endEdit;
+function planHit(px, py, touch){
+  if (S.pts.length < 3) return null;
+  for (let i = 0; i < S.pts.length; i++){ const b = badgePos(i); if (Math.hypot(b[0] - px, b[1] - py) < (touch ? 20 : 14)) return {t:'wall', i}; }
+  const [x, y] = S2P(px, py), thr = (touch ? 18 : 10) / V.plan.s; let best = -1, bd = thr;
+  for (let k = S.boxes.length - 1; k >= 0; k--){
+    const b = S.boxes[k];
+    if (b.kind === 'prism' && b.wall < 0){ if (pointInPoly({x, y}, b.poly)) return {t:'box', i:k}; continue; }
+    const g = wallGeom(b.wall), pr = b.kind === 'prism', bb = pr ? polyBox(b.poly) : null, u0 = pr ? bb.x0 : b.u, u1 = pr ? bb.x1 : b.u + b.w;
+    const u = (x - g.a.x) * g.d.x + (y - g.a.y) * g.d.y, dv = (x - g.a.x) * g.n.x + (y - g.a.y) * g.n.y;
+    if (u >= u0 && u <= u1 && dv >= 0 && dv <= b.d) return {t:'box', i:k};
+  }
+  for (let i = 0; i < S.walls.length; i++) for (let j = 0; j < S.walls[i].ops.length; j++){
+    const o = S.walls[i].ops[j], g = wallGeom(i), t = clamp((x - g.a.x) * g.d.x + (y - g.a.y) * g.d.y, o.u, o.u + o.w);
+    if (Math.hypot(x - (g.a.x + g.d.x * t), y - (g.a.y + g.d.y * t)) < thr) return {t:'op', w:i, j};
+  }
+  for (let i = 0; i < S.pts.length; i++){
+    const g = wallGeom(i), t = clamp((x - g.a.x) * g.d.x + (y - g.a.y) * g.d.y, 0, g.L);
+    const d = Math.hypot(x - (g.a.x + g.d.x * t), y - (g.a.y + g.d.y * t));
+    if (d < bd){ bd = d; best = i; }
+  }
+  if (best >= 0) return {t:'wall', i:best};
+  if (pointInPoly({x, y}, S.pts)) return {t:'floor'};
+  return null;
+}
+function unfoldHit(p){
+  if (S.pts.length < 3) return null;
+  const L = unfoldLayout(), s = V.unf.s, x = (p.x - V.unf.tx) / s, v = (V.unf.ty - p.y) / s;
+  for (const p of L.pans) for (const sb of p.subs){ const vt = -(L.fgap + p.y) - sb.y; if (x >= p.x + sb.x && x <= p.x + sb.x + sb.W && v <= vt && v >= vt - sb.H) return {t:'item', ref:p.ref.k === 'bx' ? Object.assign({}, p.ref, {f:sb.f.n}) : p.ref}; }
+  for (let i = 0; i < S.walls.length; i++){ const w = wallGeom(i).L; if (x >= L.xs[i] && x <= L.xs[i] + w && v >= 0 && v <= S.H) return {t:'wall', i}; }
+  if (pointInPoly({x:L.b.x0 + (x - L.fx), y:L.b.y0 - v - L.fgap}, S.pts)) return {t:'floor'};
+  return null;
+}
+const hitAt = (p, touch) => V.mode === 'plan' ? planHit(p.x, p.y, touch) : V.mode === 'unfold' ? unfoldHit(p) : V.mode === '3d' ? hit3D(p) : null;
+const selectHit = h => { if (h.t === 'item'){ selectItem(h.ref); } else if (h.t === 'op'){ selectItem({k:'op', w:h.w, i:h.j}); } else if (h.t === 'box'){ if (!(ITEM && ITEM.k === 'bx' && ITEM.i === h.i)) selectItem({k:'bx', i:h.i}); } else if (h.t === 'wall'){ if (ITEM || S.none || S.sel !== h.i) select(h.i); } else if (ITEM || S.none || S.sel !== -1) select(-1); };
+function openHit(h){
+  if (h.t === 'item' || h.t === 'op') return;
+  if (h.t === 'box'){ if (!(ITEM && ITEM.k === 'bx' && ITEM.i === h.i)) selectItem({k:'bx', i:h.i}); enterLayout(); return; }
+  if (h.t === 'wall'){ select(h.i); setMode('wall'); } else { select(-1); setMode('plan'); }
+}
+function moveItem(o, nu, nv, thr){
+  const wi = ITEM.k === 'op' ? ITEM.w : o.wall, L = wallGeom(wi).L;
+  nu = clamp(Math.round(nu), 0, Math.max(0, L - o.w));
+  if (U.magnet){ if (Math.abs(nu) < thr) nu = 0; if (Math.abs(nu - (L - o.w)) < thr) nu = L - o.w; }
+  const fixed = ITEM.k === 'op' ? o.t === 'door' : o.kind === 'inst';
+  const ou = o.u, ov = o.v;
+  o.u = nu; o.v = fixed ? 0 : clamp(Math.round(nv), 0, Math.max(0, S.H - o.h));
+  if (ITEM.k === 'bx' && !footprintOK(o)){ o.u = ou; o.v = ov; }
+}
+function hitItemWall(p){
+  if (V.mode !== 'wall' || S.sel < 0) return null;
+  const s = V.wall.s, u = (p.x - V.wall.tx) / s, v = (V.wall.ty - p.y) / s;
+  for (let k = S.boxes.length - 1; k >= 0; k--){ const b = S.boxes[k]; if (b.wall !== S.sel) continue;
+    if (b.kind === 'prism' ? pointInPoly({x:u, y:v}, b.poly) : (u >= b.u && u <= b.u + b.w && v >= b.v && v <= b.v + b.h)) return {k:'bx', i:k}; }
+  const ops = S.walls[S.sel].ops;
+  for (let j = ops.length - 1; j >= 0; j--){ const o = ops[j]; if (u >= o.u && u <= o.u + o.w && v >= o.v && v <= o.v + o.h) return {k:'op', w:S.sel, i:j}; }
+  return null;
+}
+function startPinch(){ const [a, b] = [...ptrs.values()]; pinch = {d:Math.hypot(a.x - b.x, a.y - b.y) || 1, mx:(a.x + b.x) / 2, my:(a.y + b.y) / 2}; }
+function doPinch(){
+  const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, k = d / pinch.d;
+  if (V.mode === '3d'){ V.cam.dist = clamp(V.cam.dist / k, 600, 60000); V.cam.px += mx - pinch.mx; V.cam.py += my - pinch.my; }
+  else {
+    const v = V[V.mode === 'plan' ? 'plan' : V.mode === 'wall' ? 'wall' : 'unf'], ns = clamp(v.s * k, .003, 3);
+    const wx = (pinch.mx - v.tx) / v.s, wy = (pinch.my - v.ty) / v.s;
+    v.s = ns; v.tx = mx - wx * ns; v.ty = my - wy * ns; v.fit = false;
+  }
+  pinch = {d, mx, my}; redraw();
+}
+const viewObj = () => V[V.mode === 'plan' ? 'plan' : V.mode === 'wall' ? 'wall' : 'unf'];
+cv.onpointerdown = e => {
+  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+  const p = pos(e); ptrs.set(e.pointerId, p);
+  if (ptrs.size === 2){ drag = null; startPinch(); return; }
+  if (ptrs.size > 2) return;
+  const touch = e.pointerType === 'touch';
+  drag = {sx:p.x, sy:p.y, lx:p.x, ly:p.y, btn:e.button, moved:false, kind:null, thr:touch ? 8 : 3, touch};
+  const alt = e.button === 1 || e.button === 2 || spaceDown;
+  hideCtx(); clearTimeout(LP);
+  if (touch && !D.active && !R.on && !EDIT){ const hit = itemAt(p); if (hit) LP = setTimeout(() => { if (drag && !drag.moved){ selectItem(hit); showCtx(p.x, p.y); drag = null; } }, 520); }
+  if (V.mode === '3d'){
+    drag.kind = 'orbit';
+    if (R.on && e.button === 0 && !spaceDown){ const pt = rulerPt(p); if (pt){ drag.kind = 'ruler'; drag.pt = pt; } return; }
+    if (e.button === 0 && !R.on && !spaceDown){
+      const hi = hitItem3D(p);
+      if (hi){
+        selectItem(hi.ref.k === 'bx' ? Object.assign({}, hi.ref, {f:hi.face.n}) : hi.ref); const o = getItem();
+        if (!EDIT && o && hasLayout(hi.ref, o) && hi.face && V.cs){ const lp = faceLocal(hi.face, p); if (lp){ drag.kind = 'igrid3'; drag.face = hi.face; drag.p0 = lp; drag.o = {x:getOffs().x, y:getOffs().y}; } }
+        if (EDIT && o && o.kind !== 'prism' && V.cs){ const wi = hi.ref.k === 'op' ? hi.ref.w : o.wall, pp = planePoint(p.x, p.y, wi); if (pp){ drag.kind = 'item3'; drag.u0 = o.u; drag.v0 = o.v; drag.p0 = pp; drag.wi = wi; } }
+        return;
+      }
+      const h = hit3D(p);
+      if (h){
+        selectHit(h);
+        if (valid(cfg(curSurf()))){ const pp = planePoint(p.x, p.y, S.sel); if (pp){ drag.kind = 'grid3'; drag.o = getOffs(); drag.p0 = pp; } }
+      }
+    }
+    return;
+  }
+  if (D.active){ drag.kind = alt ? 'pan' : 'draw'; if (!alt) D.mouse = p; return; }
+  if (R.on && e.button === 0){ const pt = rulerPt(p); drag.kind = pt ? 'ruler' : 'pan'; drag.pt = pt; return; }
+  if (alt){ drag.kind = 'pan'; return; }
+  if (V.mode === 'wall'){
+    const hi = hitItemWall(p);
+    if (EDIT && getItem()){
+      const hd = hitHandle(p, touch), o = getItem();
+      if (hd){ drag.kind = 'handle'; drag.h = hd; drag.snap = {u:o.u, w:o.w, v:o.v, h:o.h, d:o.d}; return; }
+      if (sameItem(hi, ITEM)){ drag.kind = 'item'; drag.u0 = o.u; drag.v0 = o.v; drag.sc = V.wall.s; drag.orig = o.kind === 'prism' ? o.poly.map(q => ({x:q.x, y:q.y})) : null; return; }
+      drag.kind = 'pan'; return;
+    }
+    if (hi){ selectItem(hi); const o = getItem(); if (hasLayout(hi, o)){ drag.kind = 'igrid'; drag.o = {x:getOffs().x, y:getOffs().y}; } else { drag.kind = 'grid'; drag.o = getOffs(); } return; }
+    if (ITEM){ ITEM = null; refreshPanel(); }
+    drag.kind = 'grid'; drag.o = getOffs(); return;
+  }
+  if (EDIT && getItem() && V.mode === 'plan'){
+    const hd = hitHandle(p, touch), o = getItem();
+    if (hd){ drag.kind = 'handle'; drag.h = hd; drag.snap = {u:o.u, w:o.w, v:o.v, h:o.h, d:o.d}; return; }
+  }
+  const h = V.mode === 'plan' ? planHit(p.x, p.y, touch) : unfoldHit(p);
+  if (!h){ drag.kind = 'pan'; return; }
+  if (EDIT && getItem() && V.mode === 'plan'){
+    const ref = h.t === 'box' ? {k:'bx', i:h.i} : h.t === 'op' ? {k:'op', w:h.w, i:h.j} : null;
+    if (sameItem(ref, ITEM)){ const bb = getItem(), pr = bb.kind === 'prism'; drag.kind = (pr && bb.wall < 0) ? 'poly' : 'itemP'; drag.u0 = !pr ? bb.u : 0; drag.orig = pr ? bb.poly.map(q => ({x:q.x, y:q.y})) : null; return; }
+    drag.kind = 'pan'; return;
+  }
+  selectHit(h);
+  if (h.t === 'box' || h.t === 'op'){
+    const bb = getItem();
+    if (bb && hasLayout(ITEM, bb)){ drag.kind = 'igrid'; drag.o = {x:getOffs().x, y:getOffs().y}; } else { drag.kind = 'grid'; drag.o = getOffs(); }
+    return;
+  }
+  if (h.t === 'item'){ const o = getItem(); if (V.mode === 'unfold' && o && (ITEM.k === 'bx' || o.rev)){ drag.kind = 'igrid'; drag.o = {x:getOffs().x, y:getOffs().y}; } else drag.kind = 'click'; return; }
+  if (V.mode === 'plan' && h.t === 'wall'){ drag.kind = 'click'; return; }
+  drag.kind = V.mode === 'plan' ? 'grid' : 'gridU'; drag.o = getOffs();
+};
+cv.onpointermove = e => {
+  const p = pos(e);
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, p);
+  if (D.active && V.mode !== '3d'){ D.mouse = p; D.free = e.shiftKey; redraw(); }
+  if (pinch && ptrs.size === 2){ doPinch(); return; }
+  if (!drag) return;
+  const dx = p.x - drag.sx, dy = p.y - drag.sy;
+  if (Math.hypot(dx, dy) > drag.thr){ drag.moved = true; clearTimeout(LP); }
+  if (drag.kind === 'pan'){ const v = viewObj(); v.tx += p.x - drag.lx; v.ty += p.y - drag.ly; v.fit = false; redraw(); }
+  else if (drag.kind === 'grid' && drag.moved){
+    if (V.mode === 'plan') applyDragOffs(drag.o.x, drag.o.y, dx / V.plan.s, dy / V.plan.s, V.plan.s);
+    else applyDragOffs(drag.o.x, drag.o.y, dx / V.wall.s, -dy / V.wall.s, V.wall.s);
+    changed();
+  } else if (drag.kind === 'gridU' && drag.moved){
+    applyDragOffs(drag.o.x, drag.o.y, dx / V.unf.s, (S.sel < 0 ? 1 : -1) * dy / V.unf.s, V.unf.s); changed();
+  } else if (drag.kind === 'grid3' && drag.moved){
+    const pp = planePoint(p.x, p.y, S.sel);
+    if (pp){ applyDragOffs(drag.o.x, drag.o.y, pp.u - drag.p0.u, pp.v - drag.p0.v, V.cs.f / drag.p0.dist); changed(); }
+  } else if (drag.kind === 'item' && drag.moved){
+    const o = getItem();
+    if (o){
+      const sc = drag.sc, wi = ITEM.k === 'op' ? ITEM.w : o.wall, L = wallGeom(wi).L;
+      if (o.kind === 'prism'){
+        const bb0 = polyBox(drag.orig), du = clamp(Math.round(dx / sc), -bb0.x0, L - bb0.x1), dv = clamp(Math.round(-dy / sc), -bb0.y0, S.H - bb0.y1);
+        o.poly = drag.orig.map(q => ({x:q.x + du, y:q.y + dv}));
+      } else moveItem(o, drag.u0 + dx / sc, drag.v0 - dy / sc, 8 / sc);
+      changed();
+    }
+  } else if (drag.kind === 'item3' && drag.moved){
+    const o = getItem(), pp = planePoint(p.x, p.y, drag.wi);
+    if (o && pp){ moveItem(o, drag.u0 + pp.u - drag.p0.u, drag.v0 + pp.v - drag.p0.v, 15); changed(); }
+  } else if (drag.kind === 'itemP' && drag.moved){
+    const b = getItem();
+    if (b){
+      const wi = ITEM.k === 'op' ? ITEM.w : b.wall, g = wallGeom(wi), du = (dx * g.d.x + dy * g.d.y) / V.plan.s;
+      if (b.kind === 'prism'){ const bb0 = polyBox(drag.orig), sh = clamp(Math.round(du), -bb0.x0, g.L - bb0.x1); b.poly = drag.orig.map(q => ({x:q.x + sh, y:q.y})); }
+      else b.u = clamp(Math.round(drag.u0 + du), 0, Math.max(0, g.L - b.w));
+      changed();
+    }
+  } else if (drag.kind === 'poly' && drag.moved){
+    const b = getItem();
+    if (b){
+      let sx = Math.round(dx / V.plan.s / 5) * 5, sy = Math.round(dy / V.plan.s / 5) * 5;
+      if (U.magnet){
+        const bb = polyBox(drag.orig), thr = 12 / V.plan.s; let bx = null, by = null;
+        for (const q of S.pts){
+          for (const e of [bb.x0 + sx, bb.x1 + sx]){ const d = q.x - e; if (Math.abs(d) < thr && (bx === null || Math.abs(d) < Math.abs(bx))) bx = d; }
+          for (const e of [bb.y0 + sy, bb.y1 + sy]){ const d = q.y - e; if (Math.abs(d) < thr && (by === null || Math.abs(d) < Math.abs(by))) by = d; }
+        }
+        if (bx !== null) sx += bx; if (by !== null) sy += by;
+      }
+      const mkp = (a, c) => drag.orig.map(q => ({x:q.x + a, y:q.y + c})), ok = pl => pl.every((p, i) => insideRoom(p) && insideRoom({x:(p.x + pl[(i + 1) % pl.length].x) / 2, y:(p.y + pl[(i + 1) % pl.length].y) / 2}));
+      for (const [a, c] of [[sx, sy], [sx, 0], [0, sy]]){ const np = mkp(a, c); if (ok(np)){ b.poly = np; break; } }
+      changed();
+    }
+  } else if (drag.kind === 'igrid' && drag.moved){
+    const b = getItem();
+    if (b){
+      let lx, ly;
+      if (V.mode === 'unfold'){ lx = dx / V.unf.s; ly = -dy / V.unf.s; }
+      else if (V.mode === 'wall'){ lx = dx / V.wall.s; ly = -dy / V.wall.s; }
+      else if (ITEM.k === 'op'){ const g = wallGeom(ITEM.w); lx = (dx * g.d.x + dy * g.d.y) / V.plan.s; ly = 0; }
+      else if (b.kind === 'prism' && b.wall < 0){ lx = dx / V.plan.s; ly = dy / V.plan.s; }
+      else if (b.kind !== 'prism'){ const g = wallGeom(b.wall); lx = (dx * g.d.x + dy * g.d.y) / V.plan.s; ly = (dx * g.n.x + dy * g.n.y) / V.plan.s; }
+      else { lx = 0; ly = 0; }
+      setOffs(Math.round(drag.o.x + lx), Math.round(drag.o.y + ly)); changed();
+    }
+  } else if (drag.kind === 'igrid3' && drag.moved){
+    const lp = faceLocal(drag.face, p); if (lp){ setOffs(Math.round(drag.o.x + lp.x - drag.p0.x), Math.round(drag.o.y + lp.y - drag.p0.y)); changed(); }
+  } else if (drag.kind === 'handle' && drag.moved){
+    dragHandle(p);
+  } else if (drag.kind === 'ruler' && drag.moved){
+    const q = rulerPt(p); if (q && drag.pt){ R.a = drag.pt; R.b = q; redraw(); }
+  } else if (drag.kind === 'orbit'){
+    V.cam.yaw -= (p.x - drag.lx) * .008; V.cam.pitch = clamp(V.cam.pitch + (p.y - drag.ly) * .008, .06, 1.5); redraw();
+  }
+  drag.lx = p.x; drag.ly = p.y;
+};
+function pointerEnd(e){
+  clearTimeout(LP);
+  const p = pos(e); ptrs.delete(e.pointerId);
+  if (pinch){ if (ptrs.size < 2) pinch = null; drag = null; return; }
+  if (drag && !drag.moved && e.type === 'pointerup' && drag.btn === 0){
+    if (drag.kind === 'draw'){
+      D.mouse = p;
+      const c = candidate();
+      if (c){ if (D.closing) finishDraw(); else { const l = D.pts[D.pts.length - 1]; if (!l || Math.hypot(l.x - c.x, l.y - c.y) > 1){ D.pts.push(c); D.buf = ''; } } redraw(); }
+    } else if (R.on) rulerTap(p);
+    else if (V.mode === 'wall'){
+      if (drag.kind === 'item' || drag.kind === 'igrid'){
+        const now = Date.now();
+        if (lastTap && now - lastTap.t < 340 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 28){ lastTap = null; enterLayout(); } else lastTap = {t:now, x:p.x, y:p.y};
+      }
+    }
+    else if (V.mode !== 'wall'){
+      const h = hitAt(p, drag.touch), now = Date.now();
+      if (lastTap && now - lastTap.t < 340 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 28){ lastTap = null; const hi3 = V.mode === '3d' ? hitItem3D(p) : null; if (hi3) enterLayout(); else if (h) openHit(h); }
+      else { lastTap = {t:now, x:p.x, y:p.y}; if (!h) deselect(); }
+    }
+  }
+  drag = null;
+}
+cv.onpointerup = pointerEnd; cv.onpointercancel = pointerEnd;
+cv.onwheel = e => {
+  e.preventDefault();
+  const p = pos(e);
+  const mouse = e.deltaMode === 1 || (!e.ctrlKey && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 40 && e.deltaX === 0);
+  if (e.ctrlKey || mouse){
+    const k = Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015));
+    if (V.mode === '3d'){ V.cam.dist = clamp(V.cam.dist / k, 600, 60000); redraw(); return; }
+    const v = viewObj(), ns = clamp(v.s * k, .003, 3);
+    v.tx = p.x - (p.x - v.tx) * ns / v.s; v.ty = p.y - (p.y - v.ty) * ns / v.s; v.s = ns; v.fit = false; redraw();
+  } else {
+    if (V.mode === '3d'){ V.cam.px -= e.deltaX; V.cam.py -= e.deltaY; }
+    else { const v = viewObj(); v.tx -= e.deltaX; v.ty -= e.deltaY; v.fit = false; }
+    redraw();
+  }
+};
+['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
+
+/* ================= клавіатура ================= */
+window.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  const typing = tag === 'input' && e.target.type !== 'checkbox' || tag === 'textarea';
+  if ((e.metaKey || e.ctrlKey) && !typing && e.key.toLowerCase() === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if ((e.metaKey || e.ctrlKey) && !typing && e.key.toLowerCase() === 'y'){ e.preventDefault(); redo(); return; }
+  if (e.code === 'Space' && !typing){ spaceDown = true; e.preventDefault(); }
+  if (typing) return;
+  if (D.active){
+    if (/^[0-9]$/.test(e.key) && D.pts.length){ D.buf += e.key; redraw(); e.preventDefault(); }
+    else if (e.key === 'Backspace'){ if (D.buf) D.buf = D.buf.slice(0, -1); else D.pts.pop(); redraw(); e.preventDefault(); }
+    else if (e.key === 'Enter'){
+      if (D.buf){ const c = candidate(); if (c){ D.pts.push(c); D.buf = ''; } } else if (D.pts.length >= 3) finishDraw();
+      redraw(); e.preventDefault();
+    }
+    else if (e.key === 'Escape') cancelDraw();
+    else if (e.key === 'Shift'){ D.free = true; redraw(); }
+    return;
+  }
+  if (e.key === 'Escape' && (EDIT || $('#ctx').style.display === 'flex')){ hideCtx(); endEdit(); return; }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && getItem()){ e.preventDefault(); deleteItem(); return; }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !S.none && S.sel >= 0 && S.pts.length){ e.preventDefault(); deleteWall(S.sel); return; }
+  const step = e.shiftKey ? 10 : 1;
+  const mv = (dx, dy) => { const o = getOffs(); if (!valid(o.cfg)) return; setOffs(o.x + dx * step, o.y + (S.sel < 0 ? -dy : dy) * step); changed(); e.preventDefault(); };
+  if (!S.none && (V.mode === 'wall' || V.mode === 'plan' || V.mode === 'unfold' || V.mode === '3d')){
+    if (V.mode === 'plan' && S.sel >= 0) return;
+    if (e.key === 'ArrowLeft') mv(-1, 0); else if (e.key === 'ArrowRight') mv(1, 0);
+    else if (e.key === 'ArrowUp') mv(0, 1); else if (e.key === 'ArrowDown') mv(0, -1);
+  }
+});
+window.addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; if (e.key === 'Shift') D.free = false; });
+
+/* ================= старт ================= */
+function boot(){
+  buildPats();
+  $('#roomH').value = S.H;
+  renderTiles(); buildSync(); renderWallTable(); refreshPanel(); renderProjects();
+  $('#btnPanel').classList.add('on');
+  setTab(S.tiles.some(t => t.tw > 0 && t.th > 0) ? 'layout' : 'tiles');
+  resize();
+  if (!S.pts.length) startDraw();
+}
+boot();
+</script>
+</body>
+</html>
