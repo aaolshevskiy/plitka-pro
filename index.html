@@ -7,7 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1c1c1e">
-<title>Розкладка плитки</title>
+<meta name="apple-mobile-web-app-title" content="Plytka Pro">
+<meta name="application-name" content="Plytka Pro">
+<title>Plytka Pro</title>
 <style>
 :root{
   --bg:#1c1c1e;--glass:rgba(36,36,38,.62);--fill:rgba(118,118,128,.2);--fill2:rgba(118,118,128,.34);
@@ -2064,7 +2066,7 @@ function delProject(id){
 $('#pNew').onclick = newProject;
 $('#btnSave').onclick = () => {
   const blob = new Blob([JSON.stringify(S, null, 1)], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rozkladka.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); const pr = idx.list.find(q => q.id === idx.cur), fn = ((pr && pr.name) || 'Plytka Pro').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Plytka Pro'; a.download = fn + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
 $('#btnLoad').onclick = () => $('#file').click();
 $('#file').onchange = e => {
