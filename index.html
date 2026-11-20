@@ -130,6 +130,14 @@ tr.lnk .badge{box-shadow:0 0 0 2px var(--ok)}
 #addMenu button{padding:10px 18px;border-radius:12px;text-align:left;font-size:15px}
 #addMenu button:active{background:var(--fill)}
 @media (max-width:699px){#addMenu{top:calc(108px + var(--st))}}
+#bkBar{left:var(--cx);transform:translateX(-50%);top:calc(104px + var(--st));display:none;align-items:center;gap:8px;padding:8px 8px 8px 14px;font-size:12.5px;color:#d1d1d6;max-width:min(580px,calc(var(--fw) - 24px))}
+@media (max-width:699px){#bkBar{top:calc(150px + var(--st));flex-wrap:wrap}}
+#dlg{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:20px}
+#dlg .box{width:100%;max-width:370px;padding:20px;border-radius:24px;background:rgba(44,44,46,.96)}
+#dlg h3{margin:0 0 8px;font-size:17px;font-weight:600}
+#dlg p{margin:0 0 16px;font-size:14px;line-height:1.45;color:#aeaeb2}
+#dlgB{display:flex;flex-direction:column;gap:8px}
+.bkinfo{font-size:12px;line-height:1.45;color:var(--muted);margin-top:8px}
 </style>
 </head>
 <body>
@@ -157,6 +165,8 @@ tr.lnk .badge{box-shadow:0 0 0 2px var(--ok)}
 <div class="fl glass" id="addMenu"><button data-add="door">Двері</button><button data-add="win">Вікно</button><button data-add="inst">Інсталяція</button><button data-add="box">Об'єм</button></div>
 <div class="fl glass" id="note"></div>
 <div class="fl glass" id="ctx"><button id="ctxEdit">Змінити</button><button id="ctxDel">Видалити</button></div>
+<div class="fl glass" id="bkBar"><span id="bkTxt"></span><button class="btn sm acc" id="bkNow">Зберегти копію</button><button class="btn sm" id="bkLater">Пізніше</button></div>
+<div id="dlg"><div class="glass box"><h3 id="dlgT"></h3><p id="dlgX"></p><div id="dlgB"></div></div></div>
 <div class="fl glass" id="editBar"><span>Режим «Змінити»</span><button class="btn acc" id="editOk">OK</button></div>
 <div class="fl glass" id="drawbar">
   <button class="btn" id="dbCancel" aria-label="Скасувати">✕</button><button class="btn" id="dbBack" aria-label="Крок назад">⌫</button>
@@ -228,7 +238,10 @@ tr.lnk .badge{box-shadow:0 0 0 2px var(--ok)}
   <section id="tab-proj">
     <button class="btn wide" id="pNew">+ Новий проєкт</button>
     <div id="projList" style="margin-top:10px"></div>
-    <div class="row" style="margin-top:12px"><button class="btn sm" id="btnSave">Експорт</button><button class="btn sm" id="btnLoad">Імпорт</button></div>
+    <div class="lbl">Збереження</div>
+    <div class="bkinfo" id="bkInfo" style="margin-top:0"></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="btnSave">Експорт</button><button class="btn sm" id="btnLoad">Імпорт</button></div>
+    <div id="fsBox" style="margin-top:12px"><div class="row"><button class="btn sm" id="fsBtn" style="display:none"></button><button class="btn sm" id="fsOff" style="display:none">Вимкнути</button></div><div class="bkinfo" id="fsInfo"></div></div>
     <input type="file" id="file" accept=".json,application/json" hidden>
   </section>
 </div>
@@ -284,7 +297,7 @@ function loadIndex(){
   if (!idx || !Array.isArray(idx.list) || !idx.list.length){
     let data = null;
     try { const old = localStorage.getItem('tileLayout.v2'); if (old) data = JSON.parse(old); } catch (e) {}
-    const id = uid(); idx = {cur:id, list:[{id, name:'Проєкт 1', t:Date.now()}]};
+    const id = uid(); idx = {cur:id, list:[{id, name:'Проєкт 1', t:Date.now(), c:Date.now()}]};
     try { if (data) localStorage.setItem(PKEY(id), JSON.stringify(data)); } catch (e) {}
     saveIndex();
   }
@@ -295,7 +308,10 @@ S = readProject(idx.cur) || defState();
 normalize();
 let saveT = 0;
 function saveNow(){
-  try { localStorage.setItem(PKEY(idx.cur), JSON.stringify(S)); const p = idx.list.find(x => x.id === idx.cur); if (p) p.t = Date.now(); saveIndex(); } catch (e) {}
+  try {
+    const k = PKEY(idx.cur), js = JSON.stringify(S), p = idx.list.find(x => x.id === idx.cur);
+    if (localStorage.getItem(k) !== js){ localStorage.setItem(k, js); if (p){ p.t = Date.now(); p.n = (p.n || 0) + 1; } saveIndex(); fsQueue(); }
+  } catch (e) { if (!saveNow.w){ saveNow.w = 1; setTimeout(() => flash('Браузер не дає зберегти дані — зробіть експорт у файл'), 0); } }
 }
 function scheduleSave(){ clearTimeout(saveT); saveT = setTimeout(saveNow, 300); }
 
@@ -2039,42 +2055,138 @@ function renderProjects(){
     d.querySelector('b').textContent = p.name;
     d.querySelector('.nm').onclick = () => { if (p.id !== idx.cur) openProject(p.id); };
     d.querySelector('[data-a=r]').onclick = () => { const n = prompt('Назва', p.name); if (n && n.trim()){ p.name = n.trim(); saveIndex(); renderProjects(); } };
-    d.querySelector('[data-a=d]').onclick = () => { saveNow(); const src = readProject(p.id); if (!src) return; const nid = uid(); try { localStorage.setItem(PKEY(nid), JSON.stringify(src)); } catch (e) {} idx.list.unshift({id:nid, name:p.name + ' копія', t:Date.now()}); saveIndex(); renderProjects(); };
-    d.querySelector('[data-a=x]').onclick = () => { if (confirm('Видалити проєкт?')) delProject(p.id); };
+    d.querySelector('[data-a=d]').onclick = () => { saveNow(); const src = readProject(p.id); if (!src) return; const nid = uid(); try { localStorage.setItem(PKEY(nid), JSON.stringify(src)); } catch (e) {} idx.list.unshift({id:nid, name:p.name + ' копія', t:Date.now(), c:Date.now()}); saveIndex(); renderProjects(); };
+    d.querySelector('[data-a=x]').onclick = () => { if (confirm('Видалити проєкт? Це не можна скасувати. Якщо потрібна копія, спершу зробіть експорт.')) delProject(p.id); };
     box.appendChild(d);
   });
+  renderBk();
 }
 function switchTo(data){
   D.active = false; D.pts = []; D.buf = ''; R.a = R.b = null;
   S = data || defState(); normalize(); histReset(); syncSet.clear();
   fullRefresh(true); setMode('plan', true);
   if (!S.pts.length) startDraw();
+  fsLoad();
 }
 function newProject(){
   saveNow(); const id = uid();
-  idx.list.unshift({id, name:'Проєкт ' + (idx.list.length + 1), t:Date.now()}); idx.cur = id; saveIndex();
+  idx.list.unshift({id, name:'Проєкт ' + (idx.list.length + 1), t:Date.now(), c:Date.now()}); idx.cur = id; saveIndex();
   switchTo(null); saveNow();
 }
 function openProject(id){ saveNow(); idx.cur = id; saveIndex(); switchTo(readProject(id)); }
 function delProject(id){
   try { localStorage.removeItem(PKEY(id)); } catch (e) {}
   idx.list = idx.list.filter(p => p.id !== id);
-  if (!idx.list.length){ idx.cur = null; const nid = uid(); idx.list.push({id:nid, name:'Проєкт 1', t:Date.now()}); idx.cur = nid; saveIndex(); switchTo(null); }
+  if (!idx.list.length){ idx.cur = null; const nid = uid(); idx.list.push({id:nid, name:'Проєкт 1', t:Date.now(), c:Date.now()}); idx.cur = nid; saveIndex(); switchTo(null); }
   else if (id === idx.cur){ idx.cur = idx.list[0].id; saveIndex(); switchTo(readProject(idx.cur)); }
   else { saveIndex(); renderProjects(); }
 }
-$('#pNew').onclick = newProject;
-$('#btnSave').onclick = () => {
-  const blob = new Blob([JSON.stringify(S, null, 1)], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); const pr = idx.list.find(q => q.id === idx.cur), fn = ((pr && pr.name) || 'Plytka Pro').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Plytka Pro'; a.download = fn + '.json'; a.style.display = 'none'; document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1500);
+/* ---- копії, автозбереження, нагадування ---- */
+const curProj = () => idx.list.find(q => q.id === idx.cur);
+const projFile = () => { const pr = curProj(); return (((pr && pr.name) || 'Plytka Pro').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Plytka Pro') + '.json'; };
+const fmtT = t => new Date(t).toLocaleString('uk-UA', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+const hasWork = () => S.pts.length >= 3;
+const isDirty = () => { const pr = curProj(); return !!pr && hasWork() && (pr.t || 0) > (pr.bk || 0) + 1000; };
+const FS = {h:null, ok:false, t:0, err:'', q:0};
+const FSOK = !!window.showSaveFilePicker && !/iPhone|iPad|iPod/.test(navigator.userAgent);
+const idb = (m, k, v) => new Promise((res, rej) => {
+  const r = indexedDB.open('plytka-pro', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('fh');
+  r.onerror = () => rej(r.error);
+  r.onsuccess = () => { const st = r.result.transaction('fh', m === 'get' ? 'readonly' : 'readwrite').objectStore('fh'), q = m === 'get' ? st.get(k) : m === 'set' ? st.put(v, k) : st.delete(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); };
+});
+function askDlg(title, text, btns){
+  return new Promise(res => {
+    const o = $('#dlg'), b = $('#dlgB'); $('#dlgT').textContent = title; $('#dlgX').textContent = text; b.innerHTML = '';
+    const end = i => { o.style.display = 'none'; res(i); };
+    btns.forEach((x, i) => { const e = document.createElement('button'); e.className = 'btn wide' + (x[1] ? ' ' + x[1] : ''); e.textContent = x[0]; e.onclick = () => end(i); b.appendChild(e); });
+    o.onclick = e => { if (e.target === o) end(btns.length - 1); };
+    o.style.display = 'flex';
+  });
+}
+async function doExport(){
+  const pr = curProj(); saveNow();
+  const blob = new Blob([JSON.stringify(S, null, 1)], {type:'application/json'}), name = projFile();
+  let done = false;
+  if (matchMedia('(pointer:coarse)').matches && navigator.canShare && navigator.share){
+    try { const f = new File([blob], name, {type:'application/json'}); if (navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:name}); done = true; } }
+    catch (e) { if (e && e.name === 'AbortError') return false; }
+  }
+  if (!done){
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.style.display = 'none'; document.body.appendChild(a); a.click();
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1500);
+  }
+  if (pr){ pr.bk = Date.now(); pr.n = 0; saveIndex(); }
+  renderBk(); bkCheck(); return true;
+}
+$('#btnSave').onclick = doExport;
+async function fsLoad(){
+  clearTimeout(FS.q); FS.h = null; FS.ok = false; FS.err = ''; FS.t = 0; const id = idx.cur;
+  if (FSOK){ try { const h = await idb('get', id); if (id !== idx.cur) return; if (h){ FS.h = h; FS.ok = (await h.queryPermission({mode:'readwrite'})) === 'granted'; } } catch (e) {} }
+  renderBk(); bkCheck();
+}
+async function fsWrite(){
+  if (!FS.h || !FS.ok) return; const id = idx.cur, pr = curProj();
+  try {
+    const w = await FS.h.createWritable(); await w.write(JSON.stringify(S, null, 1)); await w.close();
+    if (id !== idx.cur) return; FS.t = Date.now(); FS.err = ''; if (pr){ pr.bk = FS.t; pr.n = 0; saveIndex(); }
+  } catch (e) { FS.ok = false; FS.err = 'Автозбереження зупинилось — відновіть доступ до файлу.'; }
+  renderBk(); bkCheck();
+}
+function fsQueue(){ if (FS.h && FS.ok){ clearTimeout(FS.q); FS.q = setTimeout(fsWrite, 1500); } }
+$('#fsBtn').onclick = async () => {
+  if (FS.h && FS.ok) return;
+  try {
+    if (FS.h){ if ((await FS.h.requestPermission({mode:'readwrite'})) === 'granted'){ FS.ok = true; FS.err = ''; await fsWrite(); } }
+    else {
+      const h = await window.showSaveFilePicker({suggestedName:projFile(), types:[{description:'Plytka Pro', accept:{'application/json':['.json']}}]});
+      FS.h = h; FS.ok = true; FS.err = ''; await idb('set', idx.cur, h); await fsWrite();
+    }
+  } catch (e) { if (!e || e.name !== 'AbortError') FS.err = 'Не вдалося отримати доступ до файлу.'; }
+  renderBk();
 };
+$('#fsOff').onclick = () => { FS.h = null; FS.ok = false; FS.err = ''; clearTimeout(FS.q); idb('del', idx.cur).catch(() => {}); renderBk(); bkCheck(); };
+function renderBk(){
+  const pr = curProj(); if (!pr || !$('#bkInfo')) return;
+  $('#bkInfo').textContent = pr.bk ? `Остання копія: ${fmtT(pr.bk)}${isDirty() ? ' · після неї є зміни' : ''}` : 'Копію у файл ще не зберігали: зараз проєкт лише в пам\'яті цього браузера.';
+  const fb = $('#fsBtn'), on = FS.h && FS.ok;
+  fb.style.display = FSOK ? '' : 'none'; $('#fsOff').style.display = FSOK && FS.h ? '' : 'none';
+  fb.textContent = !FS.h ? 'Автозбереження у файл…' : !FS.ok ? 'Відновити автозбереження' : '✓ Автозбереження увімкнено';
+  fb.style.opacity = on ? .6 : 1;
+  $('#fsInfo').textContent = FS.err || (on ? `Проєкт сам записується у вибраний файл${FS.t ? ' · ' + fmtT(FS.t) : ''}.` : FSOK ? 'Один раз оберіть файл, і зміни записуватимуться в нього автоматично (Chrome, Edge на комп\'ютері).' : 'На iPhone та iPad: «Експорт» → «Зберегти у Файли» (iCloud Drive). Так проєкт буде доступний на всіх ваших пристроях.');
+}
+function bkCheck(){
+  const bar = $('#bkBar'), pr = curProj(); if (!bar || !pr) return;
+  let show = false;
+  if (hasWork() && isDirty() && !D.active && Date.now() > (pr.snz || 0) && !(FS.h && FS.ok)){
+    const age = Date.now() - (pr.bk || pr.c || pr.t || Date.now());
+    show = age > (pr.bk ? 3 : 1) * 864e5 || ((pr.n || 0) >= 80 && age > 72e5);
+  }
+  if (show) $('#bkTxt').textContent = pr.bk ? `Копії проєкту «${pr.name}» давно не було. Збережіть файл, щоб не втратити роботу.` : `Проєкт «${pr.name}» зараз лише в цьому браузері. Збережіть копію у файл.`;
+  bar.style.display = show ? 'flex' : 'none';
+}
+$('#bkNow').onclick = () => doExport();
+$('#bkLater').onclick = () => { const pr = curProj(); if (pr){ pr.snz = Date.now() + 432e5; saveIndex(); } $('#bkBar').style.display = 'none'; };
+$('#pNew').onclick = async () => {
+  const pr = curProj();
+  if (pr && hasWork() && isDirty() && !(FS.h && FS.ok)){
+    const r = await askDlg('Новий проєкт', `Проєкт «${pr.name}» зберігається лише в цьому браузері. Зробити копію у файл перед створенням нового?`, [['Експортувати й створити новий', 'acc'], ['Створити без експорту'], ['Скасувати']]);
+    if (r === 2) return;
+    if (r === 0 && !(await doExport())) return;
+  }
+  newProject();
+};
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
+addEventListener('pagehide', saveNow);
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+setInterval(bkCheck, 300000); setTimeout(bkCheck, 4000);
 $('#btnLoad').onclick = () => $('#file').click();
 $('#file').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
   r.onload = () => {
     let d; try { d = JSON.parse(r.result); } catch (err){ alert('Не вдалося прочитати файл.'); return; }
-    saveNow(); const id = uid(); idx.list.unshift({id, name:f.name.replace(/\.json$/i, '') || 'Імпорт', t:Date.now()}); idx.cur = id; saveIndex(); switchTo(d); saveNow();
+    saveNow(); const id = uid(); idx.list.unshift({id, name:f.name.replace(/\.json$/i, '') || 'Імпорт', t:Date.now(), c:Date.now()}); idx.cur = id; saveIndex(); switchTo(d); saveNow();
   };
   r.readAsText(f); e.target.value = '';
 };
@@ -2608,6 +2720,7 @@ function boot(){
   setTab(S.tiles.some(t => t.tw > 0 && t.th > 0) ? 'layout' : 'tiles');
   resize();
   if (!S.pts.length) startDraw();
+  fsLoad();
 }
 boot();
 </script>
