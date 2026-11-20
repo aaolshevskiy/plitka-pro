@@ -137,6 +137,18 @@ tr.lnk .badge{box-shadow:0 0 0 2px var(--ok)}
 @media (max-width:699px){#bkBar{top:calc(150px + var(--st));flex-wrap:wrap}}
 #dlg{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:20px}
 #dlg .box{width:100%;max-width:370px;padding:20px;border-radius:24px;background:rgba(44,44,46,.96)}
+#start{position:fixed;inset:0;z-index:40;background:rgba(18,18,20,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;padding:20px}
+#start .box{width:100%;max-width:440px;max-height:calc(100dvh - 40px);display:flex;flex-direction:column;padding:20px;border-radius:26px;background:rgba(44,44,46,.97)}
+#start h3{margin:0 0 4px;font-size:20px;font-weight:600}
+#start .sub{font-size:13px;color:#8e8e93;margin-bottom:14px}
+#startList{overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;margin-bottom:14px;min-height:0}
+#startList button{display:flex;align-items:center;gap:10px;text-align:left;padding:11px 14px;border-radius:14px;background:var(--fill)}
+#startList button:active{background:var(--fill2)}
+#startList b{display:block;font-weight:500;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#startList i{display:block;font-style:normal;font-size:12px;color:#8e8e93;margin-top:2px}
+#startList .tx{flex:1;min-width:0}
+#startList em{font-style:normal;font-size:11px;color:var(--acc);white-space:nowrap}
+#start .row2{display:flex;gap:8px}#start .row2 .btn{flex:1}
 #dlg h3{margin:0 0 8px;font-size:17px;font-weight:600}
 #dlg p{margin:0 0 16px;font-size:14px;line-height:1.45;color:#aeaeb2}
 #dlgB{display:flex;flex-direction:column;gap:8px}
@@ -169,6 +181,7 @@ tr.lnk .badge{box-shadow:0 0 0 2px var(--ok)}
 <div class="fl glass" id="note"></div>
 <div class="fl glass" id="ctx"><button id="ctxEdit">Змінити</button><button id="ctxDel">Видалити</button></div>
 <div class="fl glass" id="bkBar"><span id="bkTxt"></span><button class="btn sm acc" id="bkNow">Зберегти копію</button><button class="btn sm" id="bkLater">Пізніше</button></div>
+<div id="start"><div class="glass box"><h3>Plytka Pro</h3><div class="sub">Оберіть проєкт для роботи</div><div id="startList"></div><div class="row2"><button class="btn acc" id="stNew">+ Новий проєкт</button><button class="btn" id="stImp">Імпорт з файлу</button></div></div></div>
 <div id="dlg"><div class="glass box"><h3 id="dlgT"></h3><p id="dlgX"></p><div id="dlgB"></div></div></div>
 <div class="fl glass" id="editBar"><span>Режим «Змінити»</span><button class="btn acc" id="editOk">OK</button></div>
 <div class="fl glass" id="drawbar">
@@ -2715,6 +2728,28 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; if (e.key === 'Shift') D.free = false; });
 
 /* ================= старт ================= */
+let startShown = false;
+function projInfo(p){
+  const d = readProject(p.id); if (!d || !Array.isArray(d.pts) || d.pts.length < 3) return null;
+  let a = 0; for (let i = 0; i < d.pts.length; i++){ const u = d.pts[i], v = d.pts[(i + 1) % d.pts.length]; a += u.x * v.y - v.x * u.y; }
+  return {walls:d.pts.length, area:Math.abs(a) / 2e6};
+}
+function closeStart(){ $('#start').style.display = 'none'; }
+function showStart(){
+  const list = idx.list.slice().sort((a, b) => (b.t || 0) - (a.t || 0)), box = $('#startList'); box.innerHTML = '';
+  list.forEach((p, k) => {
+    const inf = projInfo(p), b = document.createElement('button');
+    b.innerHTML = '<span class="tx"><b></b><i></i></span>' + (k === 0 ? '<em>останній</em>' : '');
+    b.querySelector('b').textContent = p.name;
+    b.querySelector('i').textContent = (inf ? `${inf.area.toFixed(1)} м² · ${inf.walls} стін · ` : 'Порожній · ') + fmtT(p.t || Date.now());
+    b.onclick = () => { closeStart(); if (p.id !== idx.cur) openProject(p.id); else if (!S.pts.length) startDraw(); };
+    box.appendChild(b);
+  });
+  $('#stNew').onclick = () => { closeStart(); if (!S.pts.length) startDraw(); else newProject(); };
+  $('#stImp').onclick = () => $('#file').click();
+  $('#file').addEventListener('change', e => { if (e.target.files && e.target.files[0]) closeStart(); });
+  $('#start').style.display = 'flex';
+}
 function boot(){
   buildPats();
   $('#roomH').value = S.H;
@@ -2722,7 +2757,8 @@ function boot(){
   $('#btnPanel').classList.add('on');
   setTab(S.tiles.some(t => t.tw > 0 && t.th > 0) ? 'layout' : 'tiles');
   resize();
-  if (!S.pts.length) startDraw();
+  startShown = idx.list.some(p => projInfo(p));
+  if (startShown) showStart(); else if (!S.pts.length) startDraw();
   fsLoad();
 }
 boot();
