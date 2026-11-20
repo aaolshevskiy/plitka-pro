@@ -9,6 +9,9 @@
 <meta name="theme-color" content="#1c1c1e">
 <meta name="apple-mobile-web-app-title" content="Plytka Pro">
 <meta name="application-name" content="Plytka Pro">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <title>Plytka Pro</title>
 <style>
 :root{
@@ -2723,6 +2726,7 @@ function boot(){
   fsLoad();
 }
 boot();
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>
 </body>
 </html>
