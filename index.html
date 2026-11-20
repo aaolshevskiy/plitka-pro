@@ -28,6 +28,8 @@ svg{display:block}
 .ic{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px}
 .ic svg{width:21px;height:21px;stroke:var(--text);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .ic.on{background:var(--acc)}
+body.view #tPencil,body.view #tRuler,body.view #tAdd,body.view #tMagnet,body.view #tLink,body.view #bUndo,body.view #bRedo{opacity:.3;pointer-events:none}
+body.view #panel input,body.view #panel select,body.view #panel textarea,body.view #panel button{pointer-events:none;opacity:.55}
 .ic:active{background:var(--fill)}
 .btn{background:var(--fill);border-radius:11px;padding:8px 14px;min-height:34px;font-size:14px}
 .btn:active{background:var(--fill2)}
@@ -139,6 +141,7 @@ tr.lnk .badge{box-shadow:0 0 0 2px var(--ok)}
 </div>
 <div class="fl glass" id="tools">
   <button class="ic" id="tCursor" aria-label="Курсор"><svg viewBox="0 0 24 24"><path d="M6 3l13 8-6 2-3 7z"/></svg></button>
+  <button class="ic" id="tView" aria-label="Перегляд"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
   <button class="ic" id="tPencil" aria-label="Олівець"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg></button>
   <button class="ic" id="tRuler" aria-label="Рулетка"><svg viewBox="0 0 24 24"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg></button>
   <button class="ic" id="tAdd" aria-label="Додати"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -408,26 +411,50 @@ function reflex(i){ // вершина i — початок стіни i; true = 
 }
 
 /* ================= прив'язка підлога ↔ стіна ================= */
-const linkable = i => !!axisOf(i) && gridLike(cfg(S.walls[i])) && gridLike(cfg(S.floor));
-function linkedOx(i){
-  const ax = axisOf(i), g = wallGeom(i), f = S.floor, fc = cfg(f);
-  switch (ax){
-    case 'x+': return f.fx - g.a.x;
-    case 'x-': return g.a.x - f.fx - fc.tw;
-    case 'y+': return f.fy - g.a.y;
-    case 'y-': return g.a.y - f.fy - fc.th;
-  }
+/* Прив'язка працює завжди для стін, паралельних осям: зсув шарів стіни = зсув підлоги вздовж стіни + стала різниця ld.
+   При вмиканні ld підбирається так, щоб найближчі шви стіни й підлоги збіглись (кратні плитки — 1:1, 1:2, 1:3…). */
+const linkable = i => !!axisOf(i);
+function legacyLd(i){ const ax = axisOf(i), fc = cfg(S.floor); return ax === 'x-' ? -(fc.tw || 0) : ax === 'y-' ? -(fc.th || 0) : 0; }
+function ldOf(i){ const w = S.walls[i]; return typeof w.ld === 'number' ? w.ld : legacyLd(i); }
+function baseOx(i){
+  const ax = axisOf(i), g = wallGeom(i), f = S.floor;
+  switch (ax){ case 'x+': return f.fx - g.a.x; case 'x-': return g.a.x - f.fx; case 'y+': return f.fy - g.a.y; case 'y-': return g.a.y - f.fy; }
   return null;
 }
+function linkedOx(i){ const b = baseOx(i); return b == null ? null : b + ldOf(i); }
 function effOx(i){ const w = S.walls[i]; if (w.link && linkable(i)){ const v = linkedOx(i); if (v != null) return v; } return w.ox; }
 function floorFromOx(i, val){
-  const ax = axisOf(i), g = wallGeom(i), f = S.floor, fc = cfg(f);
+  const ax = axisOf(i), g = wallGeom(i), f = S.floor, ld = ldOf(i);
   switch (ax){
-    case 'x+': f.fx = val + g.a.x; break;
-    case 'x-': f.fx = g.a.x - fc.tw - val; break;
-    case 'y+': f.fy = val + g.a.y; break;
-    case 'y-': f.fy = g.a.y - fc.th - val; break;
+    case 'x+': f.fx = val - ld + g.a.x; break;
+    case 'x-': f.fx = g.a.x - (val - ld); break;
+    case 'y+': f.fy = val - ld + g.a.y; break;
+    case 'y-': f.fy = g.a.y - (val - ld); break;
   }
+}
+/* крок швів уздовж осі стіни */
+function pitchWall(c){ return (((c.rot || 0) % 180) === 90 ? c.th : c.tw) + c.j; }
+function pitchFloorAlong(c, ax){
+  const r = ((c.rot || 0) % 180 + 180) % 180; if (r !== 0 && r !== 90 || !GRID.includes(c.pat)) return null;
+  const horiz = ax[0] === 'x';
+  return ((r === 0) === horiz ? c.tw : c.th) + c.j;
+}
+function commens(a, b){
+  if (!a || !b) return false; const lo = Math.min(a, b), r = Math.max(a, b) / lo;
+  for (let q = 1; q <= 4; q++){ const p = r * q; if (Math.abs(p - Math.round(p)) * lo / q < 1.5) return true; }
+  return false;
+}
+function enableLink(i){
+  const w = S.walls[i]; if (!linkable(i)) return false;
+  const cur = w.link ? effOx(i) : w.ox; w.link = false; w.ld = 0; w.ld = cur - baseOx(i); w.link = true;
+  const wc = cfg(w), fc = cfg(S.floor);
+  if (valid(wc) && valid(fc) && (commens(pitchWall(wc), pitchFloorAlong(fc, axisOf(i))) || U.magnet)){
+    const g = wallGeom(i), A = {x:g.a.x, y:g.a.y}, B = {x:g.a.x + g.d.x * g.L, y:g.a.y + g.d.y * g.L};
+    const sw = seamsOn(wallTiles(i), {x:0, y:0}, {x:g.L, y:0}, wc.j + 2), sf = seamsOn(floorTiles(), A, B, fc.j + 2);
+    let best = null; for (const a of sw) for (const b of sf){ const d = b - a; if (best === null || Math.abs(d) < Math.abs(best)) best = d; }
+    if (best !== null) w.ld += best;
+  }
+  return true;
 }
 function setEffOx(i, val){ const w = S.walls[i]; if (w.link && linkable(i)) floorFromOx(i, val); else w.ox = val; }
 
@@ -923,6 +950,7 @@ function wallMiter(i){
 
 /* ================= вигляд ================= */
 const U = {magnet:true, mk:false};
+let VIEW = false;
 const R = {on:false, a:null, b:null};
 const V = {mode:'plan', plan:{s:.1, tx:0, ty:0, fit:true}, wall:{s:.2, tx:0, ty:0, fit:true}, unf:{s:.1, tx:0, ty:0, fit:true}, cam:{yaw:.55, pitch:.6, dist:6000, px:0, py:0, init:false}, hits:[], hitFloor:null, cs:null, proj:null};
 const D = {mode:'room', active:false, pts:[], buf:'', mouse:null, free:false, closing:false};
@@ -994,7 +1022,7 @@ function unfoldPanels(){
   return out;
 }
 function unfoldLayout(){
-  const G = 300, FG = 700, n = S.walls.length, b = bbox(), bw = b.x1 - b.x0, bh = b.y1 - b.y0, xs = [];
+  const G = U.mk ? 1300 : 300, FG = 700, n = S.walls.length, b = bbox(), bw = b.x1 - b.x0, bh = b.y1 - b.y0, xs = [];
   let x = 0; for (let i = 0; i < n; i++){ xs.push(x); x += wallGeom(i).L + G; }
   const stripW = x - G, s = V.unf.s > 0 ? V.unf.s : .08, slot0 = 135 / s, pans = unfoldPanels(), maxW = Math.max(stripW, bw + G + 3000);
   let px = bw + G, y0 = 0, rowH = bh, total = Math.max(stripW, bw);
@@ -1061,11 +1089,11 @@ function magnet(val, P, size, cands, thr){
 function applyDragOffs(sx, sy, du, dv, scale){
   const c = cfg(curSurf()); if (!valid(c)) return;
   let x = Math.round(sx + du), y = Math.round(sy + dv);
-  if (U.magnet && gridLike(c)){
-    const thr = 12 / scale; let cx, cy;
+  if (U.magnet && GRID.includes(c.pat) && (c.rot || 0) % 90 === 0){
+    const thr = 12 / scale; let cx, cy; const sw = ((c.rot || 0) % 180) === 90, pw = sw ? c.th : c.tw, ph = sw ? c.tw : c.th;
     if (S.sel < 0){ const b = bbox(); cx = S.pts.map(p => p.x - b.x0); cy = S.pts.map(p => p.y - b.y0); cx.push((b.x1 - b.x0) / 2); cy.push((b.y1 - b.y0) / 2); }
     else { const L = wallGeom(S.sel).L; cx = [0, L, L / 2]; cy = [0, S.H, S.H / 2]; }
-    x = r1(magnet(x, c.tw + c.j, c.tw, cx, thr)); y = r1(magnet(y, c.th + c.j, c.th, cy, thr));
+    x = r1(magnet(x, pw + c.j, pw, cx, thr)); y = r1(magnet(y, ph + c.j, ph, cy, thr));
   }
   setOffs(x, y);
 }
@@ -1149,7 +1177,7 @@ function chain(pts, vals, off, vertical, ovOff){
     if (j - i >= 3){ dimension(pts[i], pts[j], off, (j - i) + '×' + fmt(len), vertical); i = j; }
     else { dimension(pts[i], pts[i + 1], off, fmt(len), vertical); i++; }
   }
-  if (n > 2) dimension(pts[0], pts[n - 1], ovOff, fmt(vals[n - 1] - vals[0]), vertical);
+  if (n > 2 && ovOff) dimension(pts[0], pts[n - 1], ovOff, fmt(vals[n - 1] - vals[0]), vertical);
 }
 function boundsOf(tiles, lo, hi, pickMax){
   const rows = new Map();
@@ -1165,25 +1193,60 @@ function boundsOf(tiles, lo, hi, pickMax){
   vs.push(hi.v);
   return {us, vs};
 }
-function wallDims(i, mp, vertical){
-  const L = wallGeom(i).L, H = S.H, w = cfg(S.walls[i]);
-  let us = [0, L], vs = [0, H];
-  if (valid(w) && gridLike(w)){ const b = boundsOf(wallTiles(i), {u:0, v:0}, {u:L, v:H}, false); if (b){ us = b.us; vs = b.vs; } }
-  chain(us.map(u => mp(u, H)), us, [0, -24], false, [0, -44]);
-  if (vertical) chain(vs.map(v => mp(0, v)), vs, [-26, 0], true, [-46, 0]);
+/* положення швів уздовж відрізка A→B: де краї плиток (будь-якої схеми) перетинають цей відрізок */
+function seamsOn(tiles, A, B, tol){
+  const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy); if (len < 1) return [];
+  const ex = dx / len, ey = dy / len, res = [], E = .5;
+  for (const t of tiles){
+    const P = corners(t), m = P.length;
+    for (let k = 0; k < m; k++){
+      const p = P[k], q = P[(k + 1) % m];
+      const dp = (p[0] - A.x) * -ey + (p[1] - A.y) * ex, dq = (q[0] - A.x) * -ey + (q[1] - A.y) * ex;
+      if (dp > E && dq > E || dp < -E && dq < -E) continue;
+      if (Math.abs(dp) <= E && Math.abs(dq) <= E){ res.push((p[0] - A.x) * ex + (p[1] - A.y) * ey, (q[0] - A.x) * ex + (q[1] - A.y) * ey); }
+      else { const sc = dp / (dp - dq); res.push((p[0] + (q[0] - p[0]) * sc - A.x) * ex + (p[1] + (q[1] - p[1]) * sc - A.y) * ey); }
+    }
+  }
+  res.sort((x, y) => x - y);
+  const out = []; let grp = [];
+  const flush = () => { if (grp.length){ out.push(grp.reduce((x, y) => x + y, 0) / grp.length); grp = []; } };
+  for (const v of res){ if (grp.length && v - grp[grp.length - 1] > (tol || 4)) flush(); grp.push(v); }
+  flush();
+  return out.filter(v => v > 1.5 && v < len - 1.5);
 }
+/* ланцюжок розмірів вздовж відрізка A→B: від кута до першого шва, між швами, від останнього шва до кута */
+function chainEdge(tiles, A, B, map, off, ovOff, tol, vert){
+  const len = Math.hypot(B.x - A.x, B.y - A.y), ex = (B.x - A.x) / len, ey = (B.y - A.y) / len;
+  const vals = [0, ...seamsOn(tiles, A, B, tol), len], pts = vals.map(t => map(A.x + ex * t, A.y + ey * t));
+  chain(pts, vals, off, vert, ovOff);
+}
+function wallDims(i, mp){
+  const L = wallGeom(i).L, H = S.H, w = cfg(S.walls[i]), tl = valid(w) ? wallTiles(i) : [], tol = valid(w) ? (w.j || 2) + 2 : 4;
+  chainEdge(tl, {x:0, y:H}, {x:L, y:H}, mp, [0, -24], [0, -44], tol, false);
+  chainEdge(tl, {x:0, y:0}, {x:0, y:H}, mp, [-26, 0], [-46, 0], tol, true);
+  chainEdge(tl, {x:0, y:0}, {x:L, y:0}, mp, [0, 24], null, tol, false);
+  chainEdge(tl, {x:L, y:0}, {x:L, y:H}, mp, [26, 0], null, tol, true);
+}
+/* розміри підлоги: по кожній стіні — від кута до шва, між швами, від шва до кута, і довжина стіни */
 function floorDims(map){
-  const b = bbox(), f = cfg(S.floor);
-  let us = [b.x0, b.x1], vs = [b.y0, b.y1];
-  if (valid(f) && gridLike(f)){ const r = boundsOf(floorTiles(), {u:b.x0, v:b.y0}, {u:b.x1, v:b.y1}, true); if (r){ us = r.us; vs = r.vs; } }
-  chain(us.map(u => map(u, b.y0)), us, [0, -24], false, [0, -44]);
-  chain(vs.map(v => map(b.x0, v)), vs, [-26, 0], true, [-46, 0]);
+  const P = S.pts, n = P.length; if (n < 3) return;
+  const sp = P.map(p => map(p.x, p.y)); if (sp.some(q => !q)) return;
+  const f = cfg(S.floor), keep = DIM_AUTO; DIM_AUTO = true;
+  const tl = valid(f) ? floorTiles() : [], tol = valid(f) ? (f.j || 2) + 2 : 4;
+  const cx = sp.reduce((a, q) => a + q[0], 0) / n, cy = sp.reduce((a, q) => a + q[1], 0) / n;
+  for (let i = 0; i < n; i++){
+    const A = P[i], B = P[(i + 1) % n], a = sp[i], c = sp[(i + 1) % n];
+    const dx = c[0] - a[0], dy = c[1] - a[1], l = Math.hypot(dx, dy) || 1; let nx = -dy / l, ny = dx / l;
+    if (((a[0] + c[0]) / 2 - cx) * nx + ((a[1] + c[1]) / 2 - cy) * ny < 0){ nx = -nx; ny = -ny; }
+    chainEdge(tl, A, B, map, [nx * 22, ny * 22], [nx * 44, ny * 44], tol, false);
+  }
+  DIM_AUTO = keep;
 }
 
 /* ================= ПЛАН ================= */
 function badgePos(i){
-  const g = wallGeom(i), m = P2S(g.a.x + g.d.x * g.L / 2, g.a.y + g.d.y * g.L / 2);
-  return [m[0] - g.n.x * 24, m[1] - g.n.y * 24, m];
+  const g = wallGeom(i), m = P2S(g.a.x + g.d.x * g.L / 2, g.a.y + g.d.y * g.L / 2), k = U.mk ? -22 : 24;
+  return [m[0] - g.n.x * k, m[1] - g.n.y * k, m];
 }
 function renderFloor(map, s, o){
   if (S.pts.length < 3) return;
@@ -1246,24 +1309,34 @@ function drawRoomPlan(){
   if (U.mk){ floorDims(P2S); planItemDims(); }
 }
 function dScr(p){ return D.mode === 'prismW' ? [V.wall.tx + p.x * V.wall.s, V.wall.ty - p.y * V.wall.s] : P2S(p.x, p.y); }
+/* розміри всіх об'єктів на плані: віконні/дверні отвори, інсталяції та об'єми — від кутів і між собою */
 function planItemDims(M){
-  const it = getItem(); if (!it) return; const AM = '#ffb340'; M = M || P2S;
-  if (ITEM.k === 'bx' && it.kind === 'prism' && it.wall < 0){
-    const bb = polyBox(it.poly), rb = bbox();
-    const xs = [rb.x0, bb.x0, bb.x1, rb.x1], ys = [rb.y0, bb.y0, bb.y1, rb.y1];
+  M = M || P2S; const AM = '#ffb340', n = S.pts.length; if (n < 3) return;
+  const dirOf = (A, B) => { if (!A || !B) return null; const dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy) || 1; return [dx / l, dy / l]; };
+  S.walls.forEach((w, i) => {
+    const g = wallGeom(i), us = [0, g.L], deps = [];
+    w.ops.forEach(o => us.push(o.u, o.u + o.w));
+    S.boxes.forEach(b => {
+      if (b.wall !== i) return;
+      const bb = b.kind === 'prism' ? polyBox(b.poly) : null, a0 = bb ? bb.x0 : b.u, a1 = bb ? bb.x1 : b.u + b.w;
+      us.push(a0, a1); if (b.d > 0) deps.push([a1, b.d]);
+    });
+    if (us.length <= 2) return;
+    const Pw = (u, d) => M(g.a.x + g.d.x * u + g.n.x * (d || 0), g.a.y + g.d.y * u + g.n.y * (d || 0));
+    const O = Pw(0), nd = dirOf(O, Pw(0, 100)), ud = dirOf(O, Pw(100)); if (!nd || !ud) return;
+    const hv = Math.abs(g.d.y) > Math.abs(g.d.x);
+    const sorted = us.map(u => clamp(u, 0, g.L)).sort((a, b) => a - b), u2 = sorted.filter((u, k) => k === 0 || u - sorted[k - 1] > .5);
+    for (let k = 0; k < u2.length - 1; k++) dimension(Pw(u2[k]), Pw(u2[k + 1]), [nd[0] * 22, nd[1] * 22], fmt(u2[k + 1] - u2[k]), hv, AM);
+    for (const [u1, dd] of deps) dimension(Pw(u1, 0), Pw(u1, dd), [ud[0] * 24, ud[1] * 24], fmt(dd), !hv, AM);
+  });
+  for (const b of S.boxes){
+    if (!(b.kind === 'prism' && b.wall < 0)) continue;
+    const bb = polyBox(b.poly), rb = bbox(), xs = [rb.x0, bb.x0, bb.x1, rb.x1], ys = [rb.y0, bb.y0, bb.y1, rb.y1];
     for (let k = 0; k < 3; k++){
       if (xs[k + 1] - xs[k] > .5) dimension(M(xs[k], bb.y0), M(xs[k + 1], bb.y0), [0, -20], fmt(xs[k + 1] - xs[k]), false, AM);
       if (ys[k + 1] - ys[k] > .5) dimension(M(bb.x0, ys[k]), M(bb.x0, ys[k + 1]), [-20, 0], fmt(ys[k + 1] - ys[k]), true, AM);
     }
-    return;
   }
-  const wi = ITEM.k === 'op' ? ITEM.w : it.wall, g = wallGeom(wi); let u0, u1, dd = 0;
-  if (ITEM.k === 'op'){ u0 = it.u; u1 = it.u + it.w; }
-  else if (it.kind === 'prism'){ const bb = polyBox(it.poly); u0 = bb.x0; u1 = bb.x1; dd = it.d; }
-  else { u0 = it.u; u1 = it.u + it.w; dd = it.d; }
-  const Pw = (u, d) => M(g.a.x + g.d.x * u + g.n.x * (d || 0), g.a.y + g.d.y * u + g.n.y * (d || 0)), hv = Math.abs(g.d.y) > Math.abs(g.d.x), off = [-g.n.x * 24, -g.n.y * 24], us = [0, u0, u1, g.L];
-  for (let k = 0; k < 3; k++) if (us[k + 1] - us[k] > .5) dimension(Pw(us[k]), Pw(us[k + 1]), off, fmt(us[k + 1] - us[k]), hv, AM);
-  if (dd > 0) dimension(Pw(u1, 0), Pw(u1, dd), [g.d.x * 24, g.d.y * 24], fmt(dd), Math.abs(g.n.y) > Math.abs(g.n.x), AM);
 }
 function candidate(){
   if (!D.mouse) return null;
@@ -1363,7 +1436,7 @@ function renderWall(i, mp, s, o){
     badge(x0 + 14, yt - (U.mk ? 58 : 16), i + 1, sel ? C.acc : '#48484a', S.walls[i].link ? C.ok : null);
     if (!U.mk) haloText(String(Math.round(L)), x0 + 34 + 16, yt - 16, '#aeaeb2', `12px ${FONT}`);
   }
-  if (U.mk && ok) wallDims(i, mp, !!o.dimV);
+  if (U.mk && ok) wallDims(i, mp);
   if (U.mk) itemDims(i, mp);
 }
 function isSelItem(k, w, i){ return !!ITEM && !S.none && ITEM.k === k && (k === 'op' ? ITEM.w === w && ITEM.i === i : ITEM.i === i); }
@@ -1391,11 +1464,9 @@ function drawWall(){
 
 /* ================= РОЗГОРТКА ================= */
 function faceDims(sb, c, map){
-  const W = sb.W, H = sb.H; let us = [0, W], vs = [0, H];
-  if (gridLike(c) && !sb.f.poly){ const b = boundsOf(faceTiles(sb.f, c, sb.ox, sb.oy), {u:0, v:0}, {u:W, v:H}, false); if (b){ us = b.us; vs = b.vs; } }
-  const top = sb.y === 0;
-  chain(us.map(u => map(u, top ? H : 0)), us, [0, top ? -16 : 18], false, [0, top ? -34 : 36]);
-  if (sb.x === 0) chain(vs.map(v => map(0, v)), vs, [-18, 0], true, [-36, 0]);
+  const W = sb.W, H = sb.H, tl = faceTiles(sb.f, c, sb.ox, sb.oy), tol = (c.j || 2) + 2, top = sb.y === 0;
+  chainEdge(tl, {x:0, y:top ? H : 0}, {x:W, y:top ? H : 0}, map, [0, top ? -16 : 18], [0, top ? -34 : 36], tol, false);
+  if (sb.x === 0) chainEdge(tl, {x:0, y:0}, {x:0, y:H}, map, [-18, 0], [-36, 0], tol, true);
 }
 function drawUnfoldPanels(L, s, X, Y){
   for (const g of L.pans){
@@ -1528,13 +1599,14 @@ function draw3D(){
     poly2(quad); ctx.fillStyle = `rgba(0,0,0,${(1 - shade).toFixed(3)})`; ctx.fill();
     draw3DOps(i, g, proj, cp, light);
     ctx.lineWidth = sel ? 3 : 1; ctx.strokeStyle = sel ? C.acc : 'rgba(255,255,255,.26)'; poly2(quad); ctx.stroke();
-    if (U.mk){ DIM_AUTO = true; wallDims(i, P, sel); itemDims(i, P); DIM_AUTO = false; }
+    if (U.mk){ DIM_AUTO = true; wallDims(i, P); itemDims(i, P); DIM_AUTO = false; }
     const lp = P(g.L / 2, S.H * .74);
     if (lp) badge(lp[0], lp[1], i + 1, sel ? C.acc : 'rgba(58,58,60,.95)', S.walls[i].link ? C.ok : null, 12);
     V.hits.push({i, poly:quad.map(p => [p[0], p[1]])});
   }
   draw3DBoxes(proj, cp, light);
-  if (U.mk && ITEM && !S.none){ DIM_AUTO = true; planItemDims((x, y) => proj([x, 0, y])); DIM_AUTO = false; }
+  if (U.mk && !S.none){ DIM_AUTO = true; floorDims((x, y) => proj([x, 0, y])); DIM_AUTO = false; }
+  if (U.mk && !S.none){ DIM_AUTO = true; planItemDims((x, y) => proj([x, 0, y])); DIM_AUTO = false; }
 }
 function drawFace3D(f, c, tl, ref, cp, proj, light){
   if (v3.dot(f.nr, v3.sub(cp, f.m(0, 0))) <= 0) return;
@@ -2029,22 +2101,31 @@ function setMode(m, silent){
 }
 document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 $('#tFit').onclick = () => { layout(); if (V.mode === 'plan') V.plan.fit = true; else if (V.mode === 'wall') V.wall.fit = true; else if (V.mode === 'unfold') V.unf.fit = true; else { V.cam.init = false; V.cam.yaw = .55; V.cam.pitch = .6; } redraw(); };
-$('#tRuler').onclick = () => { closeAdd(); R.on = !R.on; R.a = R.b = null; redraw(); };
+$('#tRuler').onclick = () => { if (VIEW) return; closeAdd(); R.on = !R.on; R.a = R.b = null; redraw(); };
 $('#tMark').onclick = () => { U.mk = !U.mk; redraw(); };
 $('#tMagnet').onclick = () => { U.magnet = !U.magnet; redraw(); };
 function setLinkAll(on){
-  S.walls.forEach((w, i) => { if (on){ if (linkable(i)) w.link = true; } else if (w.link){ w.ox = effOx(i); w.link = false; } });
+  S.walls.forEach((w, i) => { if (on){ if (linkable(i) && !w.link) enableLink(i); } else if (w.link){ w.ox = effOx(i); w.link = false; } });
   changed();
 }
-$('#tLink').onclick = () => { const all = S.walls.filter((_, i) => linkable(i)); setLinkAll(!(all.length && all.every(w => w.link))); };
-$('#tPencil').onclick = () => { R.on = false; closeAdd(); startDraw(); };
-$('#tCursor').onclick = () => { R.on = false; R.a = R.b = null; closeAdd(); redraw(); };
+$('#tLink').onclick = () => { const all = S.walls.filter((_, i) => linkable(i)); if (!all.length){ flash('Прив\'язка працює для стін, паралельних осям (горизонтальних і вертикальних)'); return; } setLinkAll(!(all.length && all.every(w => w.link))); };
+$('#tPencil').onclick = () => { if (VIEW) return; R.on = false; closeAdd(); startDraw(); };
+function setView(on){
+  VIEW = on; document.body.classList.toggle('view', on);
+  if (on){ clearTimeout(LP); hideCtx(); if (EDIT) endEdit(); if (D.active) cancelDraw(); R.on = false; R.a = R.b = null; closeAdd(); drag = null; if (ITEM){ ITEM = null; refreshPanel(); } }
+  redraw();
+}
+$('#tView').onclick = () => setView(!VIEW);
+$('#tCursor').onclick = () => { if (VIEW) setView(false); R.on = false; R.a = R.b = null; closeAdd(); redraw(); };
 $('#dbBack').onclick = () => { if (D.buf) D.buf = ''; else D.pts.pop(); redraw(); };
 $('#bUndo').onclick = undo; $('#bRedo').onclick = redo;
 $('#wprev').onclick = () => select((S.sel - 1 + S.walls.length) % S.walls.length);
 $('#wnext').onclick = () => select((S.sel + 1) % S.walls.length);
 
+let FLASH = '';
+function flash(t){ FLASH = t; redraw(); clearTimeout(flash.t); flash.t = setTimeout(() => { FLASH = ''; redraw(); }, 4500); }
 function noteText(){
+  if (FLASH) return FLASH;
   if (D.active || S.none || S.pts.length < 3) return '';
   if (!valid(cfg(curSurf()))) return 'Задайте розмір плитки';
   return '';
@@ -2054,7 +2135,7 @@ function updateUI(){
   n.style.display = t ? 'block' : 'none'; n.textContent = t;
   $('#drawbar').style.display = D.active ? 'flex' : 'none';
   $('#tools').style.display = D.active ? 'none' : 'flex';
-  $('#tRuler').classList.toggle('on', R.on); $('#tCursor').classList.toggle('on', !R.on); $('#tMark').classList.toggle('on', U.mk); $('#tMagnet').classList.toggle('on', U.magnet);
+  $('#tRuler').classList.toggle('on', R.on); $('#tCursor').classList.toggle('on', !R.on && !VIEW); $('#tView').classList.toggle('on', VIEW); $('#tMark').classList.toggle('on', U.mk); $('#tMagnet').classList.toggle('on', U.magnet);
   const all = S.pts.length >= 3 ? S.walls.filter((_, i) => linkable(i)) : [];
   $('#tLink').classList.toggle('on', all.length > 0 && all.every(w => w.link));
   $('#bUndo').disabled = HI.i <= 0; $('#bRedo').disabled = HI.i >= HI.a.length - 1;
@@ -2151,7 +2232,7 @@ $('#ox').oninput = offInput('x'); $('#oy').oninput = offInput('y');
 $('#linkBtn').onclick = () => {
   if (S.sel < 0){ const any = S.walls.some(w => w.link); setLinkAll(!any); return; }
   const w = S.walls[S.sel];
-  if (w.link){ w.ox = effOx(S.sel); w.link = false; } else if (linkable(S.sel)) w.link = true;
+  if (w.link){ w.ox = effOx(S.sel); w.link = false; } else if (linkable(S.sel)) enableLink(S.sel);
   changed();
 };
 $('#syncAll').onclick = () => { S.walls.forEach((_, i) => { if (i !== S.sel) syncSet.add(i); }); buildSync(); };
@@ -2230,7 +2311,7 @@ function drawRuler(){
 let drag = null, spaceDown = false, pinch = null, lastTap = null;
 const ptrs = new Map();
 const pos = e => { const r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
-cv.oncontextmenu = e => { e.preventDefault(); if (D.active || R.on) return; const hit = itemAt(pos(e)); if (hit){ selectItem(hit); const q = pos(e); showCtx(q.x, q.y); } };
+cv.oncontextmenu = e => { e.preventDefault(); if (VIEW || D.active || R.on) return; const hit = itemAt(pos(e)); if (hit){ selectItem(hit); const q = pos(e); showCtx(q.x, q.y); } };
 $('#ctxEdit').onclick = startEdit;
 $('#ctxDel').onclick = () => { hideCtx(); if (getItem()) deleteItem(); };
 $('#editOk').onclick = endEdit;
@@ -2312,6 +2393,7 @@ cv.onpointerdown = e => {
   drag = {sx:p.x, sy:p.y, lx:p.x, ly:p.y, btn:e.button, moved:false, kind:null, thr:touch ? 8 : 3, touch};
   const alt = e.button === 1 || e.button === 2 || spaceDown;
   hideCtx(); clearTimeout(LP);
+  if (VIEW){ drag.kind = V.mode === '3d' && e.button === 0 && !spaceDown ? 'orbit' : 'pan'; return; }
   if (touch && !D.active && !R.on && !EDIT){ const hit = itemAt(p); if (hit) LP = setTimeout(() => { if (drag && !drag.moved){ selectItem(hit); showCtx(p.x, p.y); drag = null; } }, 520); }
   if (V.mode === '3d'){
     drag.kind = 'orbit';
@@ -2450,7 +2532,7 @@ function pointerEnd(e){
   clearTimeout(LP);
   const p = pos(e); ptrs.delete(e.pointerId);
   if (pinch){ if (ptrs.size < 2) pinch = null; drag = null; return; }
-  if (drag && !drag.moved && e.type === 'pointerup' && drag.btn === 0){
+  if (!VIEW && drag && !drag.moved && e.type === 'pointerup' && drag.btn === 0){
     if (drag.kind === 'draw'){
       D.mouse = p;
       const c = candidate();
@@ -2474,17 +2556,11 @@ cv.onpointerup = pointerEnd; cv.onpointercancel = pointerEnd;
 cv.onwheel = e => {
   e.preventDefault();
   const p = pos(e);
-  const mouse = e.deltaMode === 1 || (!e.ctrlKey && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 40 && e.deltaX === 0);
-  if (e.ctrlKey || mouse){
-    const k = Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015));
-    if (V.mode === '3d'){ V.cam.dist = clamp(V.cam.dist / k, 600, 60000); redraw(); return; }
-    const v = viewObj(), ns = clamp(v.s * k, .003, 3);
-    v.tx = p.x - (p.x - v.tx) * ns / v.s; v.ty = p.y - (p.y - v.ty) * ns / v.s; v.s = ns; v.fit = false; redraw();
-  } else {
-    if (V.mode === '3d'){ V.cam.px -= e.deltaX; V.cam.py -= e.deltaY; }
-    else { const v = viewObj(); v.tx -= e.deltaX; v.ty -= e.deltaY; v.fit = false; }
-    redraw();
-  }
+  const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+  const k = Math.exp(-clamp(dy, -240, 240) * (e.ctrlKey ? .01 : .0017));
+  if (V.mode === '3d'){ V.cam.dist = clamp(V.cam.dist / k, 600, 60000); redraw(); return; }
+  const v = viewObj(), ns = clamp(v.s * k, .003, 3);
+  v.tx = p.x - (p.x - v.tx) * ns / v.s; v.ty = p.y - (p.y - v.ty) * ns / v.s; v.s = ns; v.fit = false; redraw();
 };
 ['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
 
@@ -2492,6 +2568,7 @@ cv.onwheel = e => {
 window.addEventListener('keydown', e => {
   const tag = (e.target.tagName || '').toLowerCase();
   const typing = tag === 'input' && e.target.type !== 'checkbox' || tag === 'textarea';
+  if (VIEW && !typing && e.code !== 'Space') return;
   if ((e.metaKey || e.ctrlKey) && !typing && e.key.toLowerCase() === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if ((e.metaKey || e.ctrlKey) && !typing && e.key.toLowerCase() === 'y'){ e.preventDefault(); redo(); return; }
   if (e.code === 'Space' && !typing){ spaceDown = true; e.preventDefault(); }
