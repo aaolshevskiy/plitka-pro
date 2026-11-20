@@ -2066,7 +2066,7 @@ function delProject(id){
 $('#pNew').onclick = newProject;
 $('#btnSave').onclick = () => {
   const blob = new Blob([JSON.stringify(S, null, 1)], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); const pr = idx.list.find(q => q.id === idx.cur), fn = ((pr && pr.name) || 'Plytka Pro').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Plytka Pro'; a.download = fn + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); const pr = idx.list.find(q => q.id === idx.cur), fn = ((pr && pr.name) || 'Plytka Pro').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Plytka Pro'; a.download = fn + '.json'; a.style.display = 'none'; document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(a.href); }, 1500);
 };
 $('#btnLoad').onclick = () => $('#file').click();
 $('#file').onchange = e => {
